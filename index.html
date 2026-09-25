@@ -5602,6 +5602,157 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
   body.design-v19 .lesson-week-hero h1{font-size:26px!important}
 }
 
+
+/* ==========================================================
+   V20 — CLOUD SYNC
+   ========================================================== */
+.cloud-status{
+  appearance:none!important;
+  border:1px solid transparent!important;
+  background:transparent!important;
+  display:inline-flex!important;
+  align-items:center;
+  gap:6px;
+  min-height:34px;
+  padding:7px 9px!important;
+  border-radius:10px!important;
+  color:#75869d!important;
+  font:inherit!important;
+  cursor:pointer;
+}
+.cloud-status:hover{background:#101c2e!important;border-color:#24354d!important}
+.cloud-status .cloud-status-dot{font-size:10px;color:#67798f}
+.cloud-status b{font-size:11px;font-weight:800}
+.cloud-status.synced{color:#a9c9bb!important}.cloud-status.synced .cloud-status-dot{color:#58d69d}
+.cloud-status.syncing{color:#a9b9cf!important}.cloud-status.syncing .cloud-status-dot{color:#7394ff;animation:cloudPulse 1s infinite}
+.cloud-status.pending{color:#d6b982!important}.cloud-status.pending .cloud-status-dot{color:#f0b765}
+.cloud-status.offline{color:#9ba7b8!important}.cloud-status.offline .cloud-status-dot{color:#8a98aa}
+.cloud-status.error{color:#ff9aac!important}.cloud-status.error .cloud-status-dot{color:#ff7389}
+.cloud-status.signedout .cloud-status-dot,.cloud-status.local .cloud-status-dot{color:#6d7f95}
+@keyframes cloudPulse{50%{opacity:.3}}
+
+.cloud-backdrop{
+  position:fixed;inset:0;z-index:500;
+  display:grid;place-items:center;
+  padding:20px;
+  background:rgba(3,8,16,.76);
+  backdrop-filter:blur(7px);
+  opacity:0;pointer-events:none;
+  transition:opacity .14s ease;
+}
+.cloud-backdrop.open{opacity:1;pointer-events:auto}
+.cloud-panel{
+  width:min(720px,100%);
+  max-height:min(88vh,820px);
+  overflow:auto;
+  border:1px solid #2b3d58;
+  border-radius:20px;
+  background:#0b1625;
+  color:#edf3fa;
+  box-shadow:0 34px 90px rgba(0,0,0,.48);
+}
+.cloud-panel-head{
+  position:sticky;top:0;z-index:2;
+  display:flex;justify-content:space-between;gap:18px;align-items:flex-start;
+  padding:20px 22px 17px;
+  border-bottom:1px solid #1d2b40;
+  background:rgba(11,22,37,.96);
+  backdrop-filter:blur(8px);
+}
+.cloud-panel-head>div>span{
+  display:block;color:#7394ff;font-size:11px;font-weight:900;letter-spacing:.11em
+}
+.cloud-panel-head h2{margin:4px 0 3px;font-size:23px;line-height:1.15}
+.cloud-panel-head p{margin:0;color:#899bb2;font-size:13px;line-height:1.4}
+.cloud-panel-head>button{
+  width:38px;height:38px;border:1px solid #263851;border-radius:10px;
+  background:#101d30;color:#91a2b9;font-size:24px;line-height:1;cursor:pointer
+}
+.cloud-section{padding:18px 22px;border-bottom:1px solid #1a293e}
+.cloud-section h3{margin:0 0 4px;font-size:16px}
+.cloud-section p{margin:0;color:#7f91a8;font-size:12.5px;line-height:1.45}
+.cloud-section-head,.cloud-account{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px
+}
+.cloud-section-head p{font-size:11.5px;word-break:break-all}
+.cloud-link{
+  appearance:none;border:0;background:transparent;color:#8da9ff;
+  font-size:12px;font-weight:800;cursor:pointer;padding:4px
+}
+.cloud-config-block,.cloud-login-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cloud-config-block label:first-child{grid-column:1/3}
+.cloud-config-block label,.cloud-login-grid label{
+  color:#8fa0b7;font-size:12px;font-weight:800
+}
+.cloud-config-block input,.cloud-login-grid input{
+  width:100%;margin-top:5px;min-height:44px;padding:10px 11px;
+  border:1px solid #2a3d58;border-radius:10px;
+  background:#081321;color:#edf3fa;font-size:14px
+}
+.cloud-config-block .cloud-inline-actions{grid-column:1/3}
+.cloud-config-block p{grid-column:1/3}
+.cloud-inline-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.cloud-login-btn{margin-top:12px!important}
+.cloud-account>div{display:flex;align-items:center;gap:9px}
+.cloud-account-dot{width:10px;height:10px;border-radius:50%;background:#58d69d;box-shadow:0 0 0 4px rgba(88,214,157,.08)}
+.cloud-account strong{display:block;font-size:14px}
+.cloud-account small{display:block;margin-top:2px;color:#71849b;font-size:11px;word-break:break-all}
+.cloud-status-card{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px
+}
+.cloud-status-card>div{
+  padding:11px;border:1px solid #1e3048;border-radius:11px;background:#0d192a
+}
+.cloud-status-card span{display:block;color:#71839a;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.cloud-status-card strong{display:block;margin-top:4px;color:#e8eef6;font-size:13px}
+.cloud-error,.cloud-conflict{
+  margin:16px 22px 0;padding:13px 14px;border-radius:12px
+}
+.cloud-error{
+  border:1px solid rgba(255,115,137,.30);
+  background:rgba(255,115,137,.07);color:#ff9bae;font-size:12.5px
+}
+.cloud-conflict{
+  border:1px solid rgba(240,183,101,.34);
+  background:rgba(240,183,101,.065)
+}
+.cloud-conflict>span{display:block;color:#f0b765;font-size:10.5px;font-weight:900;letter-spacing:.08em}
+.cloud-conflict>strong{display:block;margin-top:4px;font-size:15px}
+.cloud-conflict>p{margin:4px 0 11px;color:#a99880;font-size:12px}
+.cloud-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cloud-choice-grid button{
+  padding:12px;border:1px solid #34465f;border-radius:11px;
+  background:#101d30;color:#dce5f0;text-align:left;cursor:pointer
+}
+.cloud-choice-grid button:hover{border-color:#647ea4;background:#15263b}
+.cloud-choice-grid b{display:block;font-size:13px}
+.cloud-choice-grid small{display:block;margin-top:3px;color:#8193aa;font-size:11px;line-height:1.35}
+.cloud-version-list{display:grid;gap:6px;margin-top:10px}
+.cloud-version-list button{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;padding:9px 10px;border:1px solid #1f3047;border-radius:10px;
+  background:#0d1929;color:#dbe4ef;text-align:left;cursor:pointer
+}
+.cloud-version-list button:hover{border-color:#3b526f;background:#112036}
+.cloud-version-list strong{display:block;font-size:12.5px}
+.cloud-version-list small{display:block;margin-top:2px;color:#74869d;font-size:11px}
+.cloud-version-list button>b{color:#8da9ff;font-size:11px}
+.cloud-no-versions{
+  margin-top:10px;padding:12px;border:1px dashed #294057;border-radius:10px;
+  color:#71849b;font-size:12px;text-align:center
+}
+.cloud-local-note{background:rgba(88,214,157,.018)}
+@media(max-width:700px){
+  .cloud-backdrop{padding:10px}
+  .cloud-panel{max-height:92vh}
+  .cloud-panel-head,.cloud-section{padding-left:15px;padding-right:15px}
+  .cloud-config-block,.cloud-login-grid,.cloud-status-card,.cloud-choice-grid{grid-template-columns:1fr}
+  .cloud-config-block label:first-child,.cloud-config-block .cloud-inline-actions,.cloud-config-block p{grid-column:1}
+  .cloud-status{padding:6px!important}
+  .cloud-status b{display:none}
+}
+@media(prefers-reduced-motion:reduce){.cloud-status.syncing .cloud-status-dot{animation:none}}
+
 </style>
 </head>
 <body class="design-v19">
@@ -5622,9 +5773,10 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
      <span class="command-label">Buscar</span><kbd>Ctrl K</kbd>
    </button>
 
-   <div id="saveIndicator" class="save-indicator" aria-live="polite">
-     <span>✓</span><b>Salvo</b>
-   </div>
+   <button id="saveIndicator" class="save-indicator cloud-status" type="button"
+     onclick="openCloudPanel()" aria-live="polite" title="Abrir sincronização em nuvem">
+     <span class="cloud-status-dot">●</span><b>Salvo neste dispositivo</b>
+   </button>
 
    <div class="profile-menu-wrap">
      <button id="profileButton" class="profile-button" onclick="toggleProfileMenu(event)" aria-label="Abrir menu do perfil">
@@ -5661,6 +5813,16 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
              <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
            </span>
            <span><strong id="profileDensityAction">Usar modo compacto</strong><small id="profileDensityCurrent">Atual: confortável</small></span>
+         </button>
+       </div>
+
+       <div class="profile-menu-section">
+         <span class="profile-menu-label">Sincronização</span>
+         <button class="profile-menu-item" onclick="openCloudPanel(); closeProfileMenu()">
+           <span class="profile-menu-icon">
+             <svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .4-8 6 6 0 0 0-11.5-1.7A4.5 4.5 0 0 0 7 18Z"/><path d="M9 14l3-3 3 3M12 11v7"/></svg>
+           </span>
+           <span><strong>Nuvem</strong><small id="profileCloudState">Somente neste dispositivo</small></span>
          </button>
        </div>
 
@@ -5728,6 +5890,12 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
   <div id="noteDrawerContent"></div>
 </aside>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+<div id="cloudBackdrop" class="cloud-backdrop" onclick="if(event.target===this)closeCloudPanel()">
+  <section id="cloudPanel" class="cloud-panel" role="dialog" aria-modal="true" aria-label="Sincronização em nuvem">
+    <div id="cloudPanelContent"></div>
+  </section>
+</div>
 
 <div id="commandBackdrop" class="command-backdrop" onclick="closeCommandPalette()"></div>
 <div id="commandPalette" class="command-palette" role="dialog" aria-modal="true" aria-label="Busca rápida">
@@ -5817,7 +5985,20 @@ const NO_CLASS=new Set([
 ]);
 
 const STORE="kaique_sge_v2";
+const HAD_LOCAL_DATA_BEFORE_BOOT=!!localStorage.getItem(STORE)||!!localStorage.getItem("kaique_sge_v1");
 const UISTORE="era_pra_ontem_ui_v1";
+
+/* V20 Cloud Sync
+   Project URL e Publishable key já incorporados nesta versão.
+   Enquanto estiverem vazios, o próprio app permite colá-los em Perfil → Nuvem. */
+const CLOUD_DEFAULT_CONFIG={
+  url:"https://rrxqrgkvtevvqletwfbv.supabase.co",
+  key:"sb_publishable_5dDe9MDhet3gYpA1wsg2JQ_uzbpiO1t"
+};
+const CLOUD_CFG_STORE="era_pra_ontem_cloud_cfg_v1";
+const CLOUD_SESSION_STORE="era_pra_ontem_cloud_session_v1";
+const CLOUD_META_STORE="era_pra_ontem_cloud_meta_v1";
+const CLOUD_CLIENT_STORE="era_pra_ontem_cloud_client_v1";
 function loadUIContext(){
  try{return JSON.parse(localStorage.getItem(UISTORE))||{}}catch(e){return {}}
 }
@@ -5830,6 +6011,421 @@ function saveUIContext(){
    }));
  }catch(e){}
 }
+
+function cloudJsonLoad(key,fallback){
+ try{const x=JSON.parse(localStorage.getItem(key));return x??fallback}catch(e){return fallback}
+}
+function cloudJsonSave(key,value){
+ try{localStorage.setItem(key,JSON.stringify(value))}catch(e){}
+}
+function cloudClientId(){
+ let id=localStorage.getItem(CLOUD_CLIENT_STORE);
+ if(!id){
+   id=(crypto?.randomUUID?.()||`client-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+   localStorage.setItem(CLOUD_CLIENT_STORE,id);
+ }
+ return id;
+}
+function cloudNormalizeConfig(x){
+ const url=String(x?.url||"").trim().replace(/\/+$/,"");
+ const key=String(x?.key||"").trim();
+ return {url,key};
+}
+let cloudConfig=cloudNormalizeConfig(cloudJsonLoad(CLOUD_CFG_STORE,CLOUD_DEFAULT_CONFIG));
+let cloudSession=cloudJsonLoad(CLOUD_SESSION_STORE,null);
+let cloudMeta=cloudJsonLoad(CLOUD_META_STORE,{
+ lastCloudVersion:0,lastCloudUpdatedAt:null,lastSyncedAt:null,
+ localUpdatedAt:null,pending:false
+});
+let cloudConflict=null;
+let cloudVersionList=[];
+let cloudSyncTimer=null;
+let cloudSyncInFlight=false;
+let cloudLastError="";
+let cloudFocusTimer=0;
+
+function cloudConfigured(){return /^https:\/\//i.test(cloudConfig.url)&&cloudConfig.key.length>10}
+function cloudSignedIn(){return !!(cloudSession?.access_token&&cloudSession?.user?.id)}
+function cloudSaveSession(){
+ if(cloudSession)cloudJsonSave(CLOUD_SESSION_STORE,cloudSession);
+ else localStorage.removeItem(CLOUD_SESSION_STORE);
+}
+function cloudSaveMeta(){cloudJsonSave(CLOUD_META_STORE,cloudMeta)}
+function cloudExpiryMs(payload){
+ if(payload?.expires_at)return Number(payload.expires_at)*1000;
+ return Date.now()+Number(payload?.expires_in||3600)*1000;
+}
+function cloudFriendlyError(err){
+ const s=String(err?.message||err||"Erro desconhecido");
+ if(/invalid login|invalid_credentials/i.test(s))return "E-mail ou senha inválidos.";
+ if(/email.*confirm/i.test(s))return "Confirme o e-mail da conta antes de entrar.";
+ if(/Failed to fetch|NetworkError|network/i.test(s))return "Sem conexão com o Supabase.";
+ if(/permission|row-level|42501|policy/i.test(s))return "O banco recusou o acesso. Confira o SQL e as políticas RLS.";
+ return s.length>180?s.slice(0,177)+"…":s;
+}
+async function cloudHttp(path,{method="GET",body=null,auth=true,headers={}}={}){
+ if(!cloudConfigured())throw new Error("A conexão com o Supabase ainda não foi configurada.");
+ if(!navigator.onLine)throw new Error("Sem conexão com a internet.");
+ if(auth){
+   const ok=await cloudEnsureSession();
+   if(!ok)throw new Error("Entre na sua conta para sincronizar.");
+ }
+ const h={"apikey":cloudConfig.key,"Accept":"application/json",...headers};
+ if(auth&&cloudSession?.access_token)h.Authorization=`Bearer ${cloudSession.access_token}`;
+ if(body!==null)h["Content-Type"]="application/json";
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),14000);
+ try{
+   const res=await fetch(`${cloudConfig.url}${path}`,{
+     method,headers:h,body:body===null?undefined:JSON.stringify(body),signal:controller.signal
+   });
+   const txt=await res.text();
+   let data=null;
+   if(txt){try{data=JSON.parse(txt)}catch(e){data=txt}}
+   if(!res.ok){
+     const msg=data?.msg||data?.message||data?.error_description||data?.error||`HTTP ${res.status}`;
+     throw new Error(msg);
+   }
+   return data;
+ }finally{clearTimeout(timer)}
+}
+async function cloudRefreshSession(){
+ if(!cloudConfigured()||!cloudSession?.refresh_token)return false;
+ try{
+   const res=await fetch(`${cloudConfig.url}/auth/v1/token?grant_type=refresh_token`,{
+     method:"POST",
+     headers:{"apikey":cloudConfig.key,"Content-Type":"application/json"},
+     body:JSON.stringify({refresh_token:cloudSession.refresh_token})
+   });
+   const data=await res.json();
+   if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||"Sessão expirada");
+   cloudSession={
+     access_token:data.access_token,
+     refresh_token:data.refresh_token||cloudSession.refresh_token,
+     expiresAt:cloudExpiryMs(data),
+     user:data.user||cloudSession.user
+   };
+   cloudSaveSession();return true;
+ }catch(e){
+   cloudSession=null;cloudSaveSession();cloudLastError=cloudFriendlyError(e);renderCloudStatus();return false;
+ }
+}
+async function cloudEnsureSession(){
+ if(!cloudSession?.access_token)return false;
+ if(Number(cloudSession.expiresAt||0)>Date.now()+60000)return true;
+ return await cloudRefreshSession();
+}
+async function cloudLogin(){
+ const email=document.getElementById("cloudEmail")?.value.trim();
+ const password=document.getElementById("cloudPassword")?.value||"";
+ if(!email||!password){showToast("Informe e-mail e senha.","warning");return}
+ if(!cloudConfigured()){showToast("Configure primeiro a URL e a chave publicável.","warning");return}
+ cloudSyncInFlight=true;cloudLastError="";renderCloudStatus();renderCloudPanel();
+ try{
+   const data=await cloudHttp("/auth/v1/token?grant_type=password",{
+     method:"POST",auth:false,body:{email,password}
+   });
+   cloudSession={
+     access_token:data.access_token,
+     refresh_token:data.refresh_token,
+     expiresAt:cloudExpiryMs(data),
+     user:data.user
+   };
+   cloudSaveSession();
+   showToast("Conta conectada. Verificando a nuvem.");
+   await cloudInitialSync();
+   await cloudLoadVersionList();
+ }catch(e){
+   cloudLastError=cloudFriendlyError(e);showToast(cloudLastError,"warning");
+ }finally{
+   cloudSyncInFlight=false;renderCloudStatus();renderCloudPanel();
+ }
+}
+async function cloudLogout(){
+ if(cloudSession?.access_token&&cloudConfigured()){
+   try{await cloudHttp("/auth/v1/logout",{method:"POST"})}catch(e){}
+ }
+ cloudSession=null;cloudSaveSession();cloudConflict=null;cloudVersionList=[];cloudLastError="";
+ renderCloudStatus();renderCloudPanel();
+}
+function cloudSaveConfig(){
+ const url=document.getElementById("cloudProjectUrl")?.value.trim()||"";
+ const key=document.getElementById("cloudPublishableKey")?.value.trim()||"";
+ if(!/^https:\/\//i.test(url)||key.length<10){
+   showToast("Confira a Project URL e a Publishable key.","warning");return;
+ }
+ cloudConfig=cloudNormalizeConfig({url,key});
+ cloudJsonSave(CLOUD_CFG_STORE,cloudConfig);
+ cloudSession=null;cloudSaveSession();
+ cloudMeta={lastCloudVersion:0,lastCloudUpdatedAt:null,lastSyncedAt:null,localUpdatedAt:cloudMeta.localUpdatedAt,pending:cloudMeta.pending};
+ cloudSaveMeta();cloudLastError="";
+ showToast("Conexão do Supabase salva. Agora entre na sua conta.");
+ renderCloudStatus();renderCloudPanel();
+}
+function cloudResetConfig(){
+ if(!confirm("Remover a configuração do Supabase deste navegador? Seus dados locais continuarão aqui."))return;
+ cloudConfig=cloudNormalizeConfig(CLOUD_DEFAULT_CONFIG);
+ localStorage.removeItem(CLOUD_CFG_STORE);
+ cloudSession=null;cloudSaveSession();cloudConflict=null;cloudVersionList=[];
+ cloudMeta.lastCloudVersion=0;cloudMeta.lastCloudUpdatedAt=null;cloudMeta.lastSyncedAt=null;cloudSaveMeta();
+ renderCloudStatus();renderCloudPanel();
+}
+async function cloudFetchStateRow(){
+ if(!cloudSignedIn())return null;
+ const uid=cloudSession.user.id;
+ const rows=await cloudHttp(`/rest/v1/teacher_app_state?select=user_id,state,version,updated_at,client_id&user_id=eq.${encodeURIComponent(uid)}&limit=1`);
+ return Array.isArray(rows)&&rows.length?rows[0]:null;
+}
+function cloudBackupLocalBeforeReplace(label="cloud"){
+ try{
+   localStorage.setItem("era_pra_ontem_local_before_cloud",JSON.stringify({
+     savedAt:new Date().toISOString(),label,state
+   }));
+ }catch(e){}
+}
+function cloudApplyRemote(row,{toast=true}={}){
+ if(!row?.state)return;
+ cloudBackupLocalBeforeReplace("antes-de-baixar-da-nuvem");
+ state=mergeState(makeDefault(),row.state);
+ Object.keys(COMPONENTS).forEach(id=>{if(!state.contentBaseline[id])state.contentBaseline[id]=state.contentLast[id]||LAST_CONTENT[id]});
+ localStorage.setItem(STORE,JSON.stringify(state));
+ cloudMeta.lastCloudVersion=Number(row.version||0);
+ cloudMeta.lastCloudUpdatedAt=row.updated_at||null;
+ cloudMeta.lastSyncedAt=new Date().toISOString();
+ cloudMeta.pending=false;cloudMeta.localUpdatedAt=null;cloudSaveMeta();
+ cloudConflict=null;cloudLastError="";
+ renderAll();renderCloudStatus();
+ if(toast)showToast("Dados atualizados a partir da nuvem.");
+}
+function cloudShowConflict(row,reason="conflito"){
+ cloudConflict={row,reason};
+ cloudSyncInFlight=false;
+ openCloudPanel();
+ renderCloudStatus();renderCloudPanel();
+}
+async function cloudPush({force=false}={}){
+ if(!cloudConfigured()||!cloudSignedIn())return false;
+ if(!navigator.onLine){renderCloudStatus();return false}
+ if(cloudSyncInFlight)return false;
+ cloudSyncInFlight=true;cloudLastError="";renderCloudStatus();
+ try{
+   const remote=await cloudFetchStateRow();
+   const known=Number(cloudMeta.lastCloudVersion||0);
+   if(!force&&remote&&Number(remote.version||0)>known&&cloudMeta.pending){
+     cloudShowConflict(remote,"remote-newer");return false;
+   }
+   const uid=cloudSession.user.id;
+   const rows=await cloudHttp(`/rest/v1/teacher_app_state?on_conflict=user_id&select=user_id,version,updated_at,client_id`,{
+     method:"POST",
+     headers:{"Prefer":"resolution=merge-duplicates,return=representation"},
+     body:{user_id:uid,state,client_id:cloudClientId()}
+   });
+   const row=Array.isArray(rows)?rows[0]:rows;
+   if(row){
+     cloudMeta.lastCloudVersion=Number(row.version||cloudMeta.lastCloudVersion||1);
+     cloudMeta.lastCloudUpdatedAt=row.updated_at||new Date().toISOString();
+   }
+   cloudMeta.lastSyncedAt=new Date().toISOString();
+   cloudMeta.pending=false;cloudMeta.localUpdatedAt=null;cloudSaveMeta();
+   cloudLastError="";
+   await cloudLoadVersionList(false);
+   return true;
+ }catch(e){
+   cloudLastError=cloudFriendlyError(e);return false;
+ }finally{
+   cloudSyncInFlight=false;renderCloudStatus();
+   if(document.getElementById("cloudBackdrop")?.classList.contains("open"))renderCloudPanel();
+ }
+}
+async function cloudPull({force=false}={}){
+ if(!cloudSignedIn())return false;
+ cloudSyncInFlight=true;cloudLastError="";renderCloudStatus();
+ try{
+   const row=await cloudFetchStateRow();
+   if(!row){showToast("Ainda não há dados salvos na nuvem.","warning");return false}
+   if(cloudMeta.pending&&!force){cloudShowConflict(row,"local-pending");return false}
+   cloudApplyRemote(row);return true;
+ }catch(e){
+   cloudLastError=cloudFriendlyError(e);showToast(cloudLastError,"warning");return false;
+ }finally{cloudSyncInFlight=false;renderCloudStatus()}
+}
+async function cloudResolveConflict(choice){
+ const row=cloudConflict?.row;if(!row)return;
+ if(choice==="remote"){
+   cloudApplyRemote(row);cloudConflict=null;renderCloudPanel();return;
+ }
+ if(choice==="local"){
+   cloudMeta.lastCloudVersion=Number(row.version||0);cloudSaveMeta();
+   cloudConflict=null;renderCloudPanel();
+   const ok=await cloudPush({force:true});
+   if(ok)showToast("Dados deste computador enviados para a nuvem.");
+ }
+}
+function cloudMarkLocalChange(){
+ cloudMeta.pending=true;
+ cloudMeta.localUpdatedAt=new Date().toISOString();
+ cloudSaveMeta();renderCloudStatus();cloudScheduleSync();
+}
+function cloudScheduleSync(delay=1800){
+ clearTimeout(cloudSyncTimer);
+ if(!cloudConfigured()||!cloudSignedIn()||!navigator.onLine)return;
+ cloudSyncTimer=setTimeout(()=>cloudPush(),delay);
+}
+async function cloudInitialSync(){
+ if(!cloudConfigured()||!cloudSignedIn())return;
+ cloudSyncInFlight=true;renderCloudStatus();
+ try{
+   const row=await cloudFetchStateRow();
+   const known=Number(cloudMeta.lastCloudVersion||0);
+   if(!row){
+     cloudSyncInFlight=false;
+     const ok=await cloudPush({force:true});
+     if(ok)showToast("Seus dados deste computador foram enviados para a nuvem.");
+     return;
+   }
+   const remoteVersion=Number(row.version||0);
+   if(known===0){
+     if(HAD_LOCAL_DATA_BEFORE_BOOT||cloudMeta.pending)cloudShowConflict(row,"first-link");
+     else cloudApplyRemote(row,{toast:false});
+     return;
+   }
+   if(remoteVersion>known){
+     if(cloudMeta.pending)cloudShowConflict(row,"remote-newer");
+     else cloudApplyRemote(row,{toast:false});
+     return;
+   }
+   if(remoteVersion===known&&cloudMeta.pending){
+     cloudSyncInFlight=false;await cloudPush();return;
+   }
+   cloudMeta.lastCloudUpdatedAt=row.updated_at||cloudMeta.lastCloudUpdatedAt;
+   cloudMeta.lastSyncedAt=new Date().toISOString();cloudSaveMeta();
+ }catch(e){cloudLastError=cloudFriendlyError(e)}
+ finally{cloudSyncInFlight=false;renderCloudStatus()}
+}
+async function cloudCheckRemote(){
+ if(!cloudConfigured()||!cloudSignedIn()||!navigator.onLine||cloudSyncInFlight)return;
+ if(Date.now()-cloudFocusTimer<8000)return;cloudFocusTimer=Date.now();
+ try{
+   const row=await cloudFetchStateRow();if(!row)return;
+   const remoteVersion=Number(row.version||0),known=Number(cloudMeta.lastCloudVersion||0);
+   if(remoteVersion>known){
+     if(cloudMeta.pending)cloudShowConflict(row,"remote-newer");
+     else{cloudApplyRemote(row,{toast:false});showToast("Mudanças mais recentes baixadas da nuvem.");}
+   }else if(cloudMeta.pending)cloudScheduleSync(250);
+ }catch(e){cloudLastError=cloudFriendlyError(e);renderCloudStatus()}
+}
+async function cloudLoadVersionList(rerender=true){
+ if(!cloudSignedIn()){cloudVersionList=[];return}
+ try{
+   const uid=cloudSession.user.id;
+   const rows=await cloudHttp(`/rest/v1/teacher_app_state_versions?select=id,version,saved_at&user_id=eq.${encodeURIComponent(uid)}&order=saved_at.desc&limit=8`);
+   cloudVersionList=Array.isArray(rows)?rows:[];
+ }catch(e){cloudVersionList=[]}
+ if(rerender)renderCloudPanel();
+}
+async function cloudRestoreVersion(id){
+ if(!confirm("Restaurar esta versão? O estado atual da nuvem será preservado automaticamente como backup."))return;
+ try{
+   const uid=cloudSession.user.id;
+   const rows=await cloudHttp(`/rest/v1/teacher_app_state_versions?select=id,state,version,saved_at&user_id=eq.${encodeURIComponent(uid)}&id=eq.${encodeURIComponent(id)}&limit=1`);
+   const old=Array.isArray(rows)?rows[0]:null;if(!old)throw new Error("Backup não encontrado.");
+   cloudBackupLocalBeforeReplace("antes-de-restaurar-backup");
+   state=mergeState(makeDefault(),old.state);
+   localStorage.setItem(STORE,JSON.stringify(state));
+   cloudMeta.pending=true;cloudMeta.localUpdatedAt=new Date().toISOString();cloudSaveMeta();
+   renderAll();renderCloudPanel();
+   const ok=await cloudPush({force:true});
+   if(ok)showToast("Versão restaurada e sincronizada.");
+ }catch(e){showToast(cloudFriendlyError(e),"warning")}
+}
+function cloudFmtTime(s){
+ if(!s)return "—";
+ try{return new Date(s).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return "—"}
+}
+function cloudStatusInfo(){
+ if(!cloudConfigured())return {mode:"local",text:"Somente neste dispositivo",profile:"Configurar nuvem"};
+ if(!navigator.onLine)return {mode:"offline",text:"Offline • salvo local",profile:"Offline"};
+ if(!cloudSignedIn())return {mode:"signedout",text:"Nuvem desconectada",profile:"Entrar para sincronizar"};
+ if(cloudSyncInFlight)return {mode:"syncing",text:"Sincronizando…",profile:"Sincronizando…"};
+ if(cloudLastError)return {mode:"error",text:"Erro na nuvem",profile:"Ver erro da sincronização"};
+ if(cloudMeta.pending)return {mode:"pending",text:"Salvo local • aguardando",profile:"Alterações aguardando nuvem"};
+ return {mode:"synced",text:"Sincronizado",profile:`Nuvem • v${cloudMeta.lastCloudVersion||1}`};
+}
+function renderCloudStatus(){
+ const x=cloudStatusInfo(),el=document.getElementById("saveIndicator");
+ if(el){
+   el.className=`save-indicator cloud-status ${x.mode}`;
+   const b=el.querySelector("b");if(b)b.textContent=x.text;
+   el.title=cloudLastError||"Abrir sincronização em nuvem";
+ }
+ const p=document.getElementById("profileCloudState");if(p)p.textContent=x.profile;
+}
+function cloudConfigForm(){
+ return `<div class="cloud-config-block">
+   <label>Project URL<input id="cloudProjectUrl" value="${esc(cloudConfig.url)}" placeholder="https://seu-projeto.supabase.co" autocomplete="off"></label>
+   <label>Publishable key<input id="cloudPublishableKey" value="${esc(cloudConfig.key)}" placeholder="sb_publishable_..." autocomplete="off"></label>
+   <div class="cloud-inline-actions"><button class="btn primary" onclick="cloudSaveConfig()">Salvar conexão</button>${cloudConfigured()?`<button class="btn" onclick="cloudResetConfig()">Trocar projeto</button>`:""}</div>
+   <p>Use somente a <b>Publishable key</b>. Nunca coloque uma Secret key / service_role aqui.</p>
+ </div>`;
+}
+function cloudConflictHtml(){
+ if(!cloudConflict)return "";
+ const row=cloudConflict.row;
+ return `<div class="cloud-conflict">
+   <span>CONFLITO DE SINCRONIZAÇÃO</span>
+   <strong>Existem dados neste computador e uma versão diferente na nuvem.</strong>
+   <p>Nuvem: versão ${row.version||"—"} • ${cloudFmtTime(row.updated_at)}. Escolha qual conjunto deve continuar.</p>
+   <div class="cloud-choice-grid">
+     <button onclick="cloudResolveConflict('remote')"><b>Usar a nuvem</b><small>Substitui os dados locais pelos dados salvos online.</small></button>
+     <button onclick="cloudResolveConflict('local')"><b>Usar este computador</b><small>Envia o estado local e cria uma nova versão na nuvem.</small></button>
+   </div>
+ </div>`;
+}
+function cloudVersionsHtml(){
+ if(!cloudVersionList.length)return `<div class="cloud-no-versions">Os backups automáticos aparecerão aqui depois das primeiras sincronizações.</div>`;
+ return `<div class="cloud-version-list">${cloudVersionList.map(v=>`<button onclick="cloudRestoreVersion('${v.id}')"><span><strong>Versão ${v.version}</strong><small>${cloudFmtTime(v.saved_at)}</small></span><b>Restaurar</b></button>`).join("")}</div>`;
+}
+function renderCloudPanel(){
+ const root=document.getElementById("cloudPanelContent");if(!root)return;
+ const configured=cloudConfigured(),signed=cloudSignedIn(),status=cloudStatusInfo();
+ root.innerHTML=`<div class="cloud-panel-head">
+   <div><span>ERA PRA ONTEM • NUVEM</span><h2>Sincronização entre dispositivos</h2><p>O app continua funcionando offline. Quando houver internet, as alterações são enviadas para o Supabase.</p></div>
+   <button onclick="closeCloudPanel()" aria-label="Fechar">×</button>
+ </div>
+ ${cloudConflictHtml()}
+ ${cloudLastError?`<div class="cloud-error">${esc(cloudLastError)}</div>`:""}
+ ${!configured?`<section class="cloud-section"><h3>1. Conectar ao projeto Supabase</h3>${cloudConfigForm()}</section>`:""}
+ ${configured&&!signed?`<section class="cloud-section"><div class="cloud-section-head"><div><h3>Entrar</h3><p>${esc(cloudConfig.url)}</p></div><button class="cloud-link" onclick="cloudResetConfig()">Alterar conexão</button></div>
+   <div class="cloud-login-grid"><label>E-mail<input id="cloudEmail" type="email" autocomplete="username" placeholder="seu@email.com"></label><label>Senha<input id="cloudPassword" type="password" autocomplete="current-password" placeholder="••••••••"></label></div>
+   <button class="btn primary cloud-login-btn" onclick="cloudLogin()">Entrar e sincronizar</button>
+ </section>`:""}
+ ${configured&&signed?`<section class="cloud-section">
+   <div class="cloud-account"><div><span class="cloud-account-dot"></span><div><strong>${esc(cloudSession.user.email||"Conta conectada")}</strong><small>${esc(cloudConfig.url)}</small></div></div><button class="cloud-link" onclick="cloudLogout()">Sair</button></div>
+   <div class="cloud-status-card ${status.mode}"><div><span>Estado</span><strong>${status.text}</strong></div><div><span>Versão na nuvem</span><strong>${cloudMeta.lastCloudVersion||"—"}</strong></div><div><span>Última sincronização</span><strong>${cloudFmtTime(cloudMeta.lastSyncedAt)}</strong></div></div>
+   <div class="cloud-inline-actions"><button class="btn primary" onclick="cloudPush({force:false})">Enviar agora</button><button class="btn" onclick="cloudPull({force:false})">Baixar da nuvem</button></div>
+ </section>
+ <section class="cloud-section"><div class="cloud-section-head"><div><h3>Backups automáticos</h3><p>O Supabase preserva até 20 versões anteriores.</p></div><button class="cloud-link" onclick="cloudLoadVersionList()">Atualizar lista</button></div>${cloudVersionsHtml()}</section>`:""}
+ <section class="cloud-section cloud-local-note"><h3>Proteção local</h3><p>Mesmo com a nuvem ativada, cada alteração é salva primeiro neste navegador. Se a internet cair, você continua trabalhando e a sincronização é retomada depois.</p></section>`;
+}
+function openCloudPanel(){
+ document.getElementById("cloudBackdrop")?.classList.add("open");
+ renderCloudPanel();
+ if(cloudSignedIn())cloudLoadVersionList();
+}
+function closeCloudPanel(){document.getElementById("cloudBackdrop")?.classList.remove("open")}
+async function cloudBoot(){
+ renderCloudStatus();
+ window.addEventListener("online",()=>{renderCloudStatus();cloudCheckRemote();cloudScheduleSync(300)});
+ window.addEventListener("offline",renderCloudStatus);
+ window.addEventListener("focus",cloudCheckRemote);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)cloudCheckRemote()});
+ if(cloudConfigured()&&cloudSession){
+   const ok=await cloudEnsureSession();
+   if(ok)await cloudInitialSync();
+ }
+ renderCloudStatus();
+}
+
 const BASE_FREQ_THROUGH="2026-09-20";
 const TODAY=()=>new Date();
 
@@ -6101,13 +6697,14 @@ let saveIndicatorTimer=null;
 function updateSaveIndicator(){
  const el=document.getElementById("saveIndicator");if(!el)return;
  el.classList.add("just-saved");
- const b=el.querySelector("b");if(b)b.textContent="Salvo agora";
+ const b=el.querySelector("b");if(b)b.textContent="Salvo neste dispositivo";
  clearTimeout(saveIndicatorTimer);
- saveIndicatorTimer=setTimeout(()=>{el.classList.remove("just-saved");if(b)b.textContent="Salvo"},1400);
+ saveIndicatorTimer=setTimeout(()=>{el.classList.remove("just-saved");renderCloudStatus()},1100);
 }
 function save(){
  if(state.analytics?.initialized)recordDailySnapshot(false);
  localStorage.setItem(STORE,JSON.stringify(state));
+ cloudMarkLocalChange();
  updateSaveIndicator();
 }
 function weekMonday(){return addDays(mondayOf(TODAY()),weekOffset*7)}
@@ -6351,6 +6948,7 @@ function renderTopContext(){
  if(modeText)modeText.textContent=density==="compact"?"Modo compacto":"Modo confortável";
  if(actionText)actionText.textContent=density==="compact"?"Usar modo confortável":"Usar modo compacto";
  if(currentText)currentText.textContent=density==="compact"?"Atual: compacto":"Atual: confortável";
+ renderCloudStatus();
 }
 function toggleSidebar(){sidebarExpanded=!sidebarExpanded;renderTopContext()}
 
@@ -8441,6 +9039,7 @@ function renderAll(){
  localStorage.setItem(STORE,JSON.stringify(state));
 }
 renderAll();
+cloudBoot();
 </script>
 </body>
 </html>
