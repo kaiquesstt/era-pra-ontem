@@ -5753,6 +5753,30 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
 }
 @media(prefers-reduced-motion:reduce){.cloud-status.syncing .cloud-status-dot{animation:none}}
 
+
+/* V22 — resolução robusta de conflito */
+.cloud-status.conflict{color:#e3bd78!important}
+.cloud-status.conflict .cloud-status-dot{color:#f0b765!important}
+.cloud-choice-grid button{
+  pointer-events:auto!important;
+  position:relative;
+  z-index:2;
+}
+.cloud-conflict.busy .cloud-choice-grid{pointer-events:none;opacity:.55}
+.cloud-conflict-progress{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 13px;border:1px solid rgba(115,148,255,.22);
+  border-radius:10px;background:rgba(115,148,255,.06);
+  color:#c8d5f7;font-size:12.5px
+}
+.cloud-conflict-progress i{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(115,148,255,.25);
+  border-top-color:#7394ff;
+  animation:cloudConflictSpin .75s linear infinite;
+}
+@keyframes cloudConflictSpin{to{transform:rotate(360deg)}}
+
 </style>
 </head>
 <body class="design-v19">
@@ -6038,6 +6062,7 @@ let cloudMeta=cloudJsonLoad(CLOUD_META_STORE,{
  localUpdatedAt:null,pending:false
 });
 let cloudConflict=null;
+let cloudConflictBusy=null;
 let cloudVersionList=[];
 let cloudSyncTimer=null;
 let cloudSyncInFlight=false;
@@ -6145,7 +6170,7 @@ async function cloudLogout(){
  if(cloudSession?.access_token&&cloudConfigured()){
    try{await cloudHttp("/auth/v1/logout",{method:"POST"})}catch(e){}
  }
- cloudSession=null;cloudSaveSession();cloudConflict=null;cloudVersionList=[];cloudLastError="";
+ cloudSession=null;cloudSaveSession();cloudConflict=null;cloudConflictBusy=null;cloudVersionList=[];cloudLastError="";
  renderCloudStatus();renderCloudPanel();
 }
 function cloudSaveConfig(){
@@ -6166,7 +6191,7 @@ function cloudResetConfig(){
  if(!confirm("Remover a configuração do Supabase deste navegador? Seus dados locais continuarão aqui."))return;
  cloudConfig=cloudNormalizeConfig(CLOUD_DEFAULT_CONFIG);
  localStorage.removeItem(CLOUD_CFG_STORE);
- cloudSession=null;cloudSaveSession();cloudConflict=null;cloudVersionList=[];
+ cloudSession=null;cloudSaveSession();cloudConflict=null;cloudConflictBusy=null;cloudVersionList=[];
  cloudMeta.lastCloudVersion=0;cloudMeta.lastCloudUpdatedAt=null;cloudMeta.lastSyncedAt=null;cloudSaveMeta();
  renderCloudStatus();renderCloudPanel();
 }
@@ -6206,6 +6231,7 @@ function cloudShowConflict(row,reason="conflito"){
 async function cloudPush({force=false}={}){
  if(!cloudConfigured()||!cloudSignedIn())return false;
  if(!navigator.onLine){renderCloudStatus();return false}
+ if(cloudConflict&&!force)return false;
  if(cloudSyncInFlight)return false;
  cloudSyncInFlight=true;cloudLastError="";renderCloudStatus();
  try{
@@ -6250,15 +6276,56 @@ async function cloudPull({force=false}={}){
  }finally{cloudSyncInFlight=false;renderCloudStatus()}
 }
 async function cloudResolveConflict(choice){
- const row=cloudConflict?.row;if(!row)return;
- if(choice==="remote"){
-   cloudApplyRemote(row);cloudConflict=null;renderCloudPanel();return;
+ const snapshot=cloudConflict?.row;
+ if(!snapshot){
+   cloudLastError="O conflito já não está disponível. Atualize a verificação da nuvem.";
+   renderCloudStatus();renderCloudPanel();return;
  }
- if(choice==="local"){
-   cloudMeta.lastCloudVersion=Number(row.version||0);cloudSaveMeta();
-   cloudConflict=null;renderCloudPanel();
-   const ok=await cloudPush({force:true});
-   if(ok)showToast("Dados deste computador enviados para a nuvem.");
+ if(cloudConflictBusy)return;
+ cloudConflictBusy=choice;
+ cloudLastError="";
+ renderCloudStatus();renderCloudPanel();
+
+ try{
+   if(choice==="remote"){
+     let remoteState=snapshot.state;
+     if(typeof remoteState==="string"){
+       try{remoteState=JSON.parse(remoteState)}catch(e){throw new Error("A versão da nuvem não contém um estado válido.")}
+     }
+     if(!remoteState||typeof remoteState!=="object")throw new Error("A versão da nuvem está vazia ou inválida.");
+
+     const row={...snapshot,state:remoteState};
+     cloudApplyRemote(row,{toast:false});
+     cloudConflict=null;
+     cloudConflictBusy=null;
+     await cloudLoadVersionList(false);
+     renderCloudStatus();renderCloudPanel();
+     showToast("Versão da nuvem aplicada neste computador.");
+     return;
+   }
+
+   if(choice==="local"){
+     // Adota a versão remota atual como base conhecida e força um novo upload.
+     cloudMeta.lastCloudVersion=Number(snapshot.version||0);
+     cloudMeta.lastCloudUpdatedAt=snapshot.updated_at||cloudMeta.lastCloudUpdatedAt;
+     cloudMeta.pending=true;
+     cloudSaveMeta();
+
+     const ok=await cloudPush({force:true});
+     if(!ok)throw new Error(cloudLastError||"Não foi possível enviar os dados deste computador.");
+
+     cloudConflict=null;
+     cloudConflictBusy=null;
+     renderCloudStatus();renderCloudPanel();
+     showToast("Dados deste computador enviados para a nuvem.");
+     return;
+   }
+
+   throw new Error("Escolha de sincronização inválida.");
+ }catch(e){
+   cloudLastError=cloudFriendlyError(e);
+   cloudConflictBusy=null;
+   renderCloudStatus();renderCloudPanel();
  }
 }
 function cloudMarkLocalChange(){
@@ -6268,6 +6335,7 @@ function cloudMarkLocalChange(){
 }
 function cloudScheduleSync(delay=1800){
  clearTimeout(cloudSyncTimer);
+ if(cloudConflict||cloudConflictBusy)return;
  if(!cloudConfigured()||!cloudSignedIn()||!navigator.onLine)return;
  cloudSyncTimer=setTimeout(()=>cloudPush(),delay);
 }
@@ -6303,6 +6371,7 @@ async function cloudInitialSync(){
  finally{cloudSyncInFlight=false;renderCloudStatus()}
 }
 async function cloudCheckRemote(){
+ if(cloudConflict||cloudConflictBusy)return;
  if(!cloudConfigured()||!cloudSignedIn()||!navigator.onLine||cloudSyncInFlight)return;
  if(Date.now()-cloudFocusTimer<8000)return;cloudFocusTimer=Date.now();
  try{
@@ -6346,6 +6415,8 @@ function cloudStatusInfo(){
  if(!cloudConfigured())return {mode:"local",text:"Somente neste dispositivo",profile:"Configurar nuvem"};
  if(!navigator.onLine)return {mode:"offline",text:"Offline • salvo local",profile:"Offline"};
  if(!cloudSignedIn())return {mode:"signedout",text:"Nuvem desconectada",profile:"Entrar para sincronizar"};
+ if(cloudConflictBusy)return {mode:"syncing",text:"Aplicando escolha…",profile:"Aplicando escolha…"};
+ if(cloudConflict)return {mode:"conflict",text:"Conflito • escolha uma versão",profile:"Escolher versão"};
  if(cloudSyncInFlight)return {mode:"syncing",text:"Sincronizando…",profile:"Sincronizando…"};
  if(cloudLastError)return {mode:"error",text:"Erro na nuvem",profile:"Ver erro da sincronização"};
  if(cloudMeta.pending)return {mode:"pending",text:"Salvo local • aguardando",profile:"Alterações aguardando nuvem"};
@@ -6370,15 +6441,15 @@ function cloudConfigForm(){
 }
 function cloudConflictHtml(){
  if(!cloudConflict)return "";
- const row=cloudConflict.row;
- return `<div class="cloud-conflict">
+ const row=cloudConflict.row,busy=cloudConflictBusy;
+ return `<div class="cloud-conflict ${busy?"busy":""}">
    <span>CONFLITO DE SINCRONIZAÇÃO</span>
    <strong>Existem dados neste computador e uma versão diferente na nuvem.</strong>
    <p>Nuvem: versão ${row.version||"—"} • ${cloudFmtTime(row.updated_at)}. Escolha qual conjunto deve continuar.</p>
-   <div class="cloud-choice-grid">
-     <button onclick="cloudResolveConflict('remote')"><b>Usar a nuvem</b><small>Substitui os dados locais pelos dados salvos online.</small></button>
-     <button onclick="cloudResolveConflict('local')"><b>Usar este computador</b><small>Envia o estado local e cria uma nova versão na nuvem.</small></button>
-   </div>
+   ${busy?`<div class="cloud-conflict-progress"><i></i><b>${busy==="remote"?"Aplicando a versão da nuvem…":"Enviando os dados deste computador…"}</b></div>`:`<div class="cloud-choice-grid">
+     <button type="button" data-cloud-choice="remote"><b>Usar a nuvem</b><small>Substitui os dados locais pelos dados salvos online.</small></button>
+     <button type="button" data-cloud-choice="local"><b>Usar este computador</b><small>Envia o estado local e cria uma nova versão na nuvem.</small></button>
+   </div>`}
  </div>`;
 }
 function cloudVersionsHtml(){
@@ -6415,6 +6486,20 @@ function openCloudPanel(){
 function closeCloudPanel(){document.getElementById("cloudBackdrop")?.classList.remove("open")}
 async function cloudBoot(){
  renderCloudStatus();
+
+ const cloudRoot=document.getElementById("cloudPanelContent");
+ if(cloudRoot&&!cloudRoot.dataset.actionsReady){
+   cloudRoot.dataset.actionsReady="1";
+   cloudRoot.addEventListener("click",e=>{
+     const choiceBtn=e.target.closest("[data-cloud-choice]");
+     if(choiceBtn){
+       e.preventDefault();
+       e.stopPropagation();
+       cloudResolveConflict(choiceBtn.dataset.cloudChoice);
+     }
+   });
+ }
+
  window.addEventListener("online",()=>{renderCloudStatus();cloudCheckRemote();cloudScheduleSync(300)});
  window.addEventListener("offline",renderCloudStatus);
  window.addEventListener("focus",cloudCheckRemote);
