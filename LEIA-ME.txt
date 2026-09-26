@@ -1,8 +1,19 @@
-ERA PRA ONTEM V25 — CARDS DO SGE MAIS LIMPOS
+ERA PRA ONTEM V26 — REGISTRO DE ERROS DO SGE
 
-- ícone sem texto duplicado;
-- título principal: TURMA • DISCIPLINA;
-- remove Projeto Integrador II dos cards;
-- NP: turno • 50 min;
-- presencial: turno;
-- não requer alteração no Supabase.
+Mudanças:
+- ao escolher uma data, o campo "Turma e matéria" mostra somente componentes que você ministra naquele dia;
+- considera aulas presenciais e NP com horários fixos;
+- feriado, recesso, férias ou dia sem aula deixam o seletor sem opções;
+- impede registrar o mesmo erro de frequência, na mesma data, para a mesma turma;
+- a regra vale para Frequência duplicada e Frequência não disponível;
+- o bloqueio acontece tanto visualmente quanto na função de salvamento;
+- exibe aviso quando a ocorrência já existe;
+- erros de tipos diferentes para a mesma turma/data continuam permitidos.
+
+Não requer alteração no Supabase.
+
+Para atualizar:
+1. substitua o index.html no GitHub;
+2. Commit changes;
+3. aguarde o GitHub Pages atualizar;
+4. use Ctrl+F5.

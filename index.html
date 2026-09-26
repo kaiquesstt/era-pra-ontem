@@ -5811,6 +5811,41 @@ body.design-v19.density-compact .school-calendar-card.letivo-only .school-day.le
 }
 
 \n/* V25 — SGE: cards sem informação redundante */\nbody.design-v19 .work-subject-top{display:grid!important;grid-template-columns:42px minmax(0,1fr)!important;gap:12px!important;align-items:center!important}\nbody.design-v19 .work-badge.work-badge-icon-only{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;display:grid!important;place-items:center!important;padding:0!important;margin:0!important;border-radius:11px!important;background:rgba(115,148,255,.055)!important}\nbody.design-v19 .work-badge.work-badge-icon-only.mat{background:rgba(86,214,158,.055)!important}\nbody.design-v19 .work-badge.work-badge-icon-only.exp{background:rgba(170,137,255,.06)!important}\nbody.design-v19 .work-badge-icon{width:28px!important;height:28px!important;object-fit:contain!important;display:block!important}\nbody.design-v19 .work-subject-top>strong{font-size:16px!important;line-height:1.25!important;font-weight:850!important;letter-spacing:-.01em!important}\nbody.design-v19 .work-subject>span{margin-top:5px!important;font-size:12.5px!important;line-height:1.3!important;color:#8193aa!important}\nbody.design-v19 .work-date strong{font-size:14.5px!important}\nbody.design-v19 .work-date span{margin-top:4px!important;font-size:12.5px!important}\nbody.design-v19.density-compact .work-subject-top{grid-template-columns:34px minmax(0,1fr)!important;gap:9px!important}\nbody.design-v19.density-compact .work-badge.work-badge-icon-only{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important}\nbody.design-v19.density-compact .work-badge-icon{width:23px!important;height:23px!important}\nbody.design-v19.density-compact .work-subject>span{display:block!important;font-size:12px!important}\n
+
+/* ==========================================================
+   V26 — Registro de erros do SGE mais seguro
+   ========================================================== */
+body.design-v19 .sge-issue-editor label small.sge-issue-day-hint{
+  display:block;
+  margin-top:5px;
+  color:#71859d;
+  font-size:12px!important;
+  line-height:1.3;
+  font-weight:700;
+}
+body.design-v19 .sge-issue-editor select:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+body.design-v19 .sge-issue-editor .btn:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+body.design-v19 .sge-issue-duplicate-warning{
+  display:none;
+  grid-column:1/-1;
+  padding:10px 12px;
+  border:1px solid rgba(240,183,101,.30);
+  border-radius:10px;
+  background:rgba(240,183,101,.07);
+  color:#d9b97d;
+  font-size:12.5px;
+  line-height:1.4;
+}
+body.design-v19 .sge-issue-duplicate-warning.show{display:block}
+body.design-v19 .sge-issue-duplicate-warning b{color:#f0c477}
+
 </style>
 </head>
 <body class="design-v19">
@@ -7813,12 +7848,105 @@ function sgeIssueList(){
 }
 function sgeIssueOpen(){return sgeIssueList().filter(x=>!x.resolved)}
 function toggleSgeIssueEditor(){sgeIssueEditorOpen=!sgeIssueEditorOpen;renderAtualizar()}
+
+function isFrequencyIssueKind(kind){
+ return kind==="freq_dup"||kind==="freq_missing";
+}
+function sgeIssueClassesForDate(date){
+ if(!date||!isTeachingDay(date))return [];
+ const dow=parseISO(date).getDay(),rows=[...PRESENTIAL.filter(x=>x.dow===dow),...NPS.filter(x=>x.dow===dow)];
+ const byComp=new Map();
+ rows.forEach(x=>{
+   const c=COMPONENTS[x.comp];if(!c)return;
+   if(!byComp.has(x.comp))byComp.set(x.comp,{
+     comp:x.comp,turma:c.turma,subject:c.tipo==="exp"?"Experimental":c.nome,
+     times:[],hasPresential:false,hasNP:false
+   });
+   const item=byComp.get(x.comp);
+   item.times.push(x.time);
+   if("n" in x)item.hasNP=true;else item.hasPresential=true;
+ });
+ return [...byComp.values()].sort((a,b)=>{
+   const ta=a.times[0]||"99:99",tb=b.times[0]||"99:99";
+   const ma=Number(ta.slice(0,2))*60+Number(ta.slice(3,5));
+   const mb=Number(tb.slice(0,2))*60+Number(tb.slice(3,5));
+   return ma-mb||a.turma.localeCompare(b.turma,"pt-BR",{numeric:true})||a.subject.localeCompare(b.subject,"pt-BR");
+ });
+}
+function sgeIssueCompOptionsHtml(date,selected=""){
+ const rows=sgeIssueClassesForDate(date);
+ if(!rows.length)return `<option value="">Nenhuma aula prevista nesta data</option>`;
+ return rows.map(x=>{
+   const mode=x.hasPresential&&x.hasNP?"Presencial + NP":x.hasNP?"NP":"Presencial";
+   return `<option value="${x.comp}" ${x.comp===selected?"selected":""}>${x.turma} • ${x.subject} • ${mode}</option>`;
+ }).join("");
+}
+function sgeIssueDuplicate(date,comp,kind){
+ if(!date||!comp||!isFrequencyIssueKind(kind))return null;
+ const turma=COMPONENTS[comp]?.turma;if(!turma)return null;
+ return sgeIssueList().find(x=>
+   x.date===date &&
+   x.kind===kind &&
+   COMPONENTS[x.comp]?.turma===turma
+ )||null;
+}
+function refreshSgeIssueDuplicateState(){
+ const date=document.getElementById("sgeIssueDate")?.value||"";
+ const comp=document.getElementById("sgeIssueComp")?.value||"";
+ const kind=document.getElementById("sgeIssueKind")?.value||"freq_dup";
+ const warning=document.getElementById("sgeIssueDuplicateWarning");
+ const saveBtn=document.getElementById("sgeIssueSaveBtn");
+ const duplicate=sgeIssueDuplicate(date,comp,kind);
+ const noClass=!comp;
+ if(warning){
+   if(duplicate){
+     const c=COMPONENTS[duplicate.comp],label=SGE_ISSUE_TYPES[kind]||"Erro de frequência";
+     warning.innerHTML=`<b>Já registrado.</b> ${label} para a turma ${c?.turma||"—"} em ${br(date)}.`;
+     warning.classList.add("show");
+   }else{
+     warning.textContent="";
+     warning.classList.remove("show");
+   }
+ }
+ if(saveBtn)saveBtn.disabled=!!duplicate||noClass;
+}
+function refreshSgeIssueCompOptions(){
+ const date=document.getElementById("sgeIssueDate")?.value||"";
+ const select=document.getElementById("sgeIssueComp");
+ const hint=document.getElementById("sgeIssueDayHint");
+ if(!select)return;
+ const previous=select.value;
+ const rows=sgeIssueClassesForDate(date);
+ const keep=rows.some(x=>x.comp===previous)?previous:"";
+ select.innerHTML=sgeIssueCompOptionsHtml(date,keep);
+ select.disabled=!rows.length;
+ if(rows.length&&!keep)select.value=rows[0].comp;
+ if(hint){
+   if(!date)hint.textContent="Escolha uma data para carregar suas turmas.";
+   else if(!rows.length)hint.textContent="Você não tem aula prevista nesta data.";
+   else{
+     const turmas=[...new Set(rows.map(x=>x.turma))];
+     hint.textContent=`${turmas.length} turma${turmas.length===1?"":"s"} • ${rows.length} componente${rows.length===1?"":"s"} neste dia`;
+   }
+ }
+ refreshSgeIssueDuplicateState();
+}
 function saveSgeIssue(){
  const date=document.getElementById("sgeIssueDate")?.value||"";
  const comp=document.getElementById("sgeIssueComp")?.value||"";
  const kind=document.getElementById("sgeIssueKind")?.value||"freq_dup";
  const note=document.getElementById("sgeIssueNote")?.value.trim()||"";
- if(!date||!comp){showToast("Informe a data e a turma/matéria.");return}
+ if(!date){showToast("Informe a data do erro.");return}
+ const available=sgeIssueClassesForDate(date);
+ if(!available.length){showToast("Você não tem aula prevista nessa data.","warning");return}
+ if(!comp||!available.some(x=>x.comp===comp)){showToast("Escolha uma turma que você ministra nessa data.","warning");return}
+ const duplicate=sgeIssueDuplicate(date,comp,kind);
+ if(duplicate){
+   const turma=COMPONENTS[comp]?.turma||"—";
+   showToast(`Esse erro de frequência já foi registrado para a turma ${turma} em ${br(date)}.`,"warning");
+   refreshSgeIssueDuplicateState();
+   return;
+ }
  const id=`issue-${Date.now()}`;
  state.sgeIssues[id]={id,date,comp,kind,note,resolved:false,createdAt:analyticsDate(),resolvedAt:null};
  save();sgeIssueEditorOpen=false;refreshAfterMutation("atualizar");showToast("Ocorrência salva para a coordenação.");
@@ -7854,9 +7982,8 @@ async function copySgeIssueMessage(){
 }
 function renderSgeIssuesPanel(){
  const all=sgeIssueList(),open=all.filter(x=>!x.resolved),done=all.filter(x=>x.resolved);
- const compOptions=Object.entries(COMPONENTS)
-  .sort((a,b)=>`${a[1].turma}-${a[1].nome}`.localeCompare(`${b[1].turma}-${b[1].nome}`,"pt-BR",{numeric:true}))
-  .map(([id,c])=>`<option value="${id}">${c.turma} • ${c.tipo==="exp"?"Experimental":c.nome}</option>`).join("");
+ const issueDate=analyticsDate(),issueClasses=sgeIssueClassesForDate(issueDate);
+ const compOptions=sgeIssueCompOptionsHtml(issueDate);
  return `<section class="sge-issues-panel" id="sgeCoordinationPanel">
    <div class="sge-issues-head">
      <div>
@@ -7870,11 +7997,15 @@ function renderSgeIssuesPanel(){
      </div>
    </div>
    ${sgeIssueEditorOpen?`<div class="sge-issue-editor">
-     <label><span>Data com erro</span><input id="sgeIssueDate" type="date" value="${analyticsDate()}"></label>
-     <label><span>Turma e matéria</span><select id="sgeIssueComp">${compOptions}</select></label>
-     <label><span>Tipo de erro</span><select id="sgeIssueKind">${Object.entries(SGE_ISSUE_TYPES).map(([k,v])=>`<option value="${k}" ${k==="freq_dup"?"selected":""}>${v}</option>`).join("")}</select></label>
+     <label><span>Data com erro</span><input id="sgeIssueDate" type="date" value="${issueDate}" onchange="refreshSgeIssueCompOptions()"></label>
+     <label><span>Turma e matéria</span>
+       <select id="sgeIssueComp" ${issueClasses.length?"":"disabled"} onchange="refreshSgeIssueDuplicateState()">${compOptions}</select>
+       <small id="sgeIssueDayHint" class="sge-issue-day-hint">${issueClasses.length?`${[...new Set(issueClasses.map(x=>x.turma))].length} turma(s) • ${issueClasses.length} componente(s) neste dia`:"Você não tem aula prevista nesta data."}</small>
+     </label>
+     <label><span>Tipo de erro</span><select id="sgeIssueKind" onchange="refreshSgeIssueDuplicateState()">${Object.entries(SGE_ISSUE_TYPES).map(([k,v])=>`<option value="${k}" ${k==="freq_dup"?"selected":""}>${v}</option>`).join("")}</select></label>
      <label class="wide"><span>Observação opcional</span><input id="sgeIssueNote" placeholder="Ex.: duplicou duas vezes, apareceu em data errada..."></label>
-     <button class="btn primary" onclick="saveSgeIssue()">Salvar ocorrência</button>
+     <div id="sgeIssueDuplicateWarning" class="sge-issue-duplicate-warning"></div>
+     <button id="sgeIssueSaveBtn" class="btn primary" onclick="saveSgeIssue()" ${issueClasses.length?"":"disabled"}>Salvar ocorrência</button>
    </div>`:""}
    <div class="sge-issues-summary">
      <span class="pending"><b>${open.length}</b> pendente(s)</span>
