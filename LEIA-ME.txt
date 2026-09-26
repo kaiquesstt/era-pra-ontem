@@ -1,1 +1,17 @@
-V23: corrige o alinhamento do modo Só letivos. 01/10/2026 permanece quinta-feira. Não requer mudança no Supabase.
+ERA PRA ONTEM V24 — HORÁRIOS FIXOS DAS AULAS NP
+
+Alterações:
+- 9 aulas NP agora têm dia e horário específicos de 50 minutos;
+- o SGE passa a organizar NP pelo dia real da semana;
+- o Calendário mostra presenciais e NP separadamente;
+- a Home e Próximos 7 dias passam a considerar a carga NP;
+- as NP continuam fora dos Planos da Semana;
+- o app gera lembrete da NP no dia quando conteúdo/frequência ainda não foram confirmados;
+- IDs antigos das NP foram preservados para não perder registros já salvos;
+- nenhuma alteração no Supabase é necessária.
+
+Para atualizar o GitHub Pages:
+1. substitua o index.html pela V24;
+2. Commit changes;
+3. aguarde o deploy;
+4. recarregue com Ctrl+F5.

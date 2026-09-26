@@ -5790,6 +5790,26 @@ body.design-v19.density-compact .school-calendar-card.letivo-only .school-day.le
   min-height:72px;
 }
 
+
+/* V24 — aulas NP com horário fixo */
+.school-class-chip.chip-np{
+  background:rgba(102,190,210,.10)!important;
+  border:1px dashed rgba(102,190,210,.34)!important;
+  color:#9edce9!important;
+}
+.school-calendar-legend i.np{
+  background:#66bed2;
+  box-shadow:0 0 0 1px rgba(102,190,210,.18);
+}
+.seven-day-load .np{
+  color:#9edce9!important;
+  background:rgba(102,190,210,.09)!important;
+  border:1px dashed rgba(102,190,210,.20);
+}
+.work-row .work-date span{
+  white-space:nowrap;
+}
+
 </style>
 </head>
 <body class="design-v19">
@@ -5994,8 +6014,17 @@ const PRESENTIAL = [
 ];
 
 const NPS = [
- {comp:"fis-23.06",n:1},{comp:"fis-33.05",n:1},{comp:"fis-33.06",n:1},{comp:"fis-33.07",n:1},{comp:"fis-33.08",n:1},
- {comp:"mat-23.06",n:1},{comp:"mat-23.06",n:2},{comp:"mat-33.08",n:1},{comp:"mat-33.08",n:2}
+ /* Horários fixos — todas as NP duram 50 minutos.
+    A ordem foi preservada para manter compatibilidade com os IDs já salvos. */
+ {comp:"fis-23.06",n:1,dow:1,day:"Segunda-feira",time:"22:10–23:00"},
+ {comp:"fis-33.05",n:1,dow:4,day:"Quinta-feira",time:"22:10–23:00"},
+ {comp:"fis-33.06",n:1,dow:5,day:"Sexta-feira",time:"22:10–23:00"},
+ {comp:"fis-33.07",n:1,dow:2,day:"Terça-feira",time:"18:00–18:50"},
+ {comp:"fis-33.08",n:1,dow:5,day:"Sexta-feira",time:"18:00–18:50"},
+ {comp:"mat-23.06",n:1,dow:3,day:"Quarta-feira",time:"18:00–18:50"},
+ {comp:"mat-23.06",n:2,dow:3,day:"Quarta-feira",time:"22:10–23:00"},
+ {comp:"mat-33.08",n:1,dow:1,day:"Segunda-feira",time:"18:00–18:50"},
+ {comp:"mat-33.08",n:2,dow:2,day:"Terça-feira",time:"22:10–23:00"}
 ];
 
 const LAST_CONTENT = {
@@ -6826,13 +6855,16 @@ function entriesForWeek(mon){
     comp:s.comp,date:ds,effectiveDate:ds,day:s.day,time:s.time,mode:"Presencial",group:s.group||null
   });
  });
- // As NP são obrigações da semana e não recebem uma data fictícia de aula.
- if(inTerm(iso(addDays(mon,4)))){
-  NPS.forEach((s,i)=>out.push({
+ // NP com dia e horário fixos. O ID antigo é preservado para não perder
+ // registros já salvos nas versões anteriores.
+ NPS.forEach((s,i)=>{
+  const d=addDays(mon,s.dow-1),ds=iso(d);
+  if(NO_CLASS.has(ds)||!inTerm(ds))return;
+  out.push({
     id:`${wk}|NP|${i}|${s.comp}|${s.n}`, weekKey:wk, weekEnd:iso(addDays(mon,6)),
-    comp:s.comp,date:null,effectiveDate:iso(addDays(mon,6)),day:"NP",time:`NP ${s.n}`,mode:`NP ${s.n}`,group:null
-  }));
- }
+    comp:s.comp,date:ds,effectiveDate:ds,day:s.day,time:s.time,mode:`NP ${s.n}`,group:null
+  });
+ });
  return out;
 }
 function weekEntries(){ return entriesForWeek(weekMonday()); }
@@ -6852,7 +6884,7 @@ function rec(e){
  }
  const r=state.weekly[e.id];
  if(!r.comp)r.comp=e.comp;
- if(r.date===undefined)r.date=e.date;
+ if(r.date===undefined||r.date===null)r.date=e.date;
  if(!r.mode)r.mode=e.mode;
  if(r.skipped===undefined)r.skipped=false;
  return r;
@@ -7921,6 +7953,36 @@ function classShortFromComp(comp){
  const c=COMPONENTS[comp]; if(!c)return "Aula";
  return c.tipo==="mat"?`Mat ${c.turma}`:c.tipo==="exp"?`Exp ${c.turma}`:`Fís ${c.turma}`;
 }
+function openPlansForDate(date){
+ const target=mondayOf(parseISO(date)),base=mondayOf(TODAY());
+ lessonPlanWeekOffset=Math.round((target-base)/(7*86400000));
+ lessonPlanView="day";
+ localStorage.setItem("lesson_plan_view","day");
+ saveUIContext();
+ renderRoute("aulas",{scrollTop:true});
+ setTimeout(()=>{
+   const el=document.querySelector(`[data-plan-date="${date}"]`);
+   if(el)el.scrollIntoView({behavior:"auto",block:"start"});
+ },0);
+}
+function openSgeForDate(date){
+ const target=mondayOf(parseISO(date)),base=mondayOf(TODAY());
+ weekOffset=Math.round((target-base)/(7*86400000));
+ const dow=parseISO(date).getDay();
+ const names={1:"Segunda-feira",2:"Terça-feira",3:"Quarta-feira",4:"Quinta-feira",5:"Sexta-feira"};
+ updateScope="semana";updateView="data";
+ workspaceSelection=`data:${names[dow]||""}`;
+ saveUIContext();
+ renderRoute("atualizar",{scrollTop:true});
+}
+function openDayContext(date){
+ const classes=schoolClassesForDate(date);
+ if(classes.some(x=>x.kind==="school")){openPlansForDate(date);return}
+ if(classes.some(x=>x.kind==="np")){openSgeForDate(date);return}
+ const tone=TONOENEM_LESSONS.find(x=>x.date===date);
+ if(tone){goToneLesson(tone.id);return}
+ show("calendario");
+}
 function schoolClassesForDate(date){
  const items=[];
  const dt=new Date(`${date}T12:00:00`);
@@ -7930,7 +7992,16 @@ function schoolClassesForDate(date){
      const c=COMPONENTS[x.comp];
      items.push({kind:"school",time:x.time,label:`${c.nome} • ${c.turma}`,short:classShortFromComp(x.comp)});
    });
+   NPS.filter(x=>x.dow===dow).forEach(x=>{
+     const c=COMPONENTS[x.comp];
+     items.push({kind:"np",time:x.time,label:`NP • ${c.nome} • ${c.turma}`,short:`NP ${c.turma}`});
+   });
  }
+ items.sort((a,b)=>{
+   if(a.kind==="tono")return 1;
+   if(b.kind==="tono")return -1;
+   return timeToMin(a.time)-timeToMin(b.time);
+ });
  TONOENEM_LESSONS.filter(x=>x.date===date).forEach(x=>{
    items.push({kind:"tono",time:x.label,label:`#TONOENEM • Física • ${x.label}`,short:"#TONOENEM"});
  });
@@ -8026,10 +8097,12 @@ function renderSchoolCalendar(){
    const classNames=["school-day",today?"today":"",weekend?"weekend":"",hasClass?"has-class":"",dayClasses.some(x=>x.kind==="tono")?"has-tono":"",`tone-${vis.tone}`].filter(Boolean).join(" ");
    const note = vis.note ? `<div class="school-day-note">${esc(vis.note)}</div>` : "";
    const schoolCount=dayClasses.filter(x=>x.kind==="school").length;
+   const npCount=dayClasses.filter(x=>x.kind==="np").length;
    const workload=calendarWorkloadForDate(date,orgTasks);
    const chips=[];
    const pendingDay=workload.plans+workload.deliveries;
    if(schoolCount) chips.push(`<span class="school-class-chip chip-school">${schoolCount} aula${schoolCount>1?"s":""}</span>`);
+   if(npCount) chips.push(`<span class="school-class-chip chip-np">${npCount} NP</span>`);
    if(dayClasses.some(x=>x.kind==="tono")) chips.push(`<span class="school-class-chip chip-tono">#TONOENEM</span>`);
    if(pendingDay) chips.push(`<span class="school-class-chip chip-pending">${pendingDay} pend.</span>`);
    const classChips=chips.length?`<div class="school-class-stack">${chips.join("")}</div>`:"";
@@ -8043,6 +8116,8 @@ function renderSchoolCalendar(){
  }
  const monthEvents=SCHOOL_EVENTS.filter(e=>{const a=e.date||e.start;return Number(a.slice(5,7))===m+1;});
  const monthLessons=TONOENEM_LESSONS.filter(x=>Number(x.date.slice(5,7))===m+1);
+ const monthNpCount=Array.from({length:days},(_,i)=>`${year}-${String(m+1).padStart(2,"0")}-${String(i+1).padStart(2,"0")}`)
+   .reduce((n,date)=>n+schoolClassesForDate(date).filter(x=>x.kind==="np").length,0);
  const midDate=`${year}-${String(m+1).padStart(2,"0")}-15`;
  const midTerm=schoolTermForDate(midDate);
  const letivosNoMes=Array.from({length:days},(_,i)=>`${year}-${String(m+1).padStart(2,"0")}-${String(i+1).padStart(2,"0")}`).filter(isTeachingDay).length;
@@ -8064,6 +8139,7 @@ function renderSchoolCalendar(){
    </div>
    <div class="calendar-mini-stats">
      <span><b>${letivosNoMes}</b> dias letivos</span>
+     <span><b>${monthNpCount}</b> NP programadas</span>
      <span><b>${monthLessons.length}</b> aulas #TONOENEM</span>
      <span><b>${orgTasks.filter(t=>t.due&&t.due.startsWith(`${year}-${String(m+1).padStart(2,"0")}`)).length}</b> prazos / metas</span>
    </div>
@@ -8078,7 +8154,8 @@ function renderSchoolCalendar(){
        <span><i class="recess"></i>Recesso</span>
        <span><i class="vacation"></i>Férias</span>
        <span><i class="term"></i>Início / fim de bimestre</span>
-       <span><i class="class"></i>Dia com aula sua</span>
+       <span><i class="class"></i>Aula presencial</span>
+       <span><i class="np"></i>Aula NP</span>
      </div>
    </section>
    <aside class="calendar-month-events">
@@ -8124,6 +8201,20 @@ function organizationTasks(){
  const mc=week.filter(e=>!rec(e).contentPosted).length,mf=week.filter(e=>!rec(e).attendancePosted).length;
  if(mc+mf)push({id:`sge-week:${iso(mon)}`,kind:"sge",area:"SGE",title:"Fechar SGE da semana",sub:`${mc} conteúdo(s) • ${mf} frequência(s)`,due:weekEnd,lead:2,icon:"building",next:"Conferir a semana em um único painel; a anotação local continua opcional.",action:"openCurrentWeek()"});
 
+ // As NP agora têm horário real: quando chega o dia, o app cobra apenas
+ // as que ainda não foram confirmadas no SGE.
+ const npByDate={};
+ week.filter(e=>e.mode.startsWith("NP")).forEach(e=>{
+   const r=rec(e);
+   if(r.contentPosted&&r.attendancePosted)return;
+   (npByDate[e.date]??=[]).push(e);
+ });
+ Object.entries(npByDate).forEach(([date,entries])=>{
+   const labels=[...new Set(entries.map(e=>`${COMPONENTS[e.comp].turma} ${COMPONENTS[e.comp].tipo==="mat"?"Matemática":"Física"}`))];
+   const weekday=parseISO(date).toLocaleDateString("pt-BR",{weekday:"long"});
+   push({id:`np-day:${date}`,kind:"np",area:"SGE",title:`NP de ${weekday} • ${entries.length} pendente(s)`,sub:labels.join(" • "),due:date,lead:0,icon:"note",next:"Abrir o SGE do dia e confirmar conteúdo e frequência das aulas NP.",action:`openSgeForDate('${date}')`});
+ });
+
  const issues=sgeIssueOpen();
  if(issues.length){const oldest=issues.map(x=>x.createdAt||today).sort()[0];push({id:"sge-issues",kind:"issue",area:"SGE",title:`Pedir correção de ${issues.length} erro(s) no SGE`,sub:"Ocorrências aguardando coordenação",due:oldest,lead:999,force:true,icon:"note",next:"Copiar a mensagem pronta e encaminhar para a coordenação.",action:"goSgeIssues()"})}
 
@@ -8162,15 +8253,18 @@ function closeQuickCapture(){quickCaptureOpen=false;renderResumo()}
 function saveQuickCapture(){const title=document.getElementById("quickCaptureTitle")?.value.trim(),due=document.getElementById("quickCaptureDue")?.value||"";if(!title){showToast("Escreva o que você precisa lembrar.","warning");return}const id=`extra-quick-${Date.now()}`;state.extras[id]={id,title,category:"outro",status:"afazer",due,note:"Captura rápida",createdAt:analyticsDate(),completedAt:null};save();quickCaptureOpen=false;renderResumo();renderNav()}
 function quickCaptureHtml(){if(!quickCaptureOpen)return "";return `<div class="quick-capture-backdrop" onclick="if(event.target===this)closeQuickCapture()"><section class="quick-capture"><div class="quick-capture-head"><div><span>LEMBRAR DISSO</span><h2>Captura rápida</h2></div><button onclick="closeQuickCapture()">×</button></div><label>O que você precisa lembrar?<input id="quickCaptureTitle" placeholder="Ex.: entregar formulário para a coordenação"></label><label>Quando? <span>opcional</span><input id="quickCaptureDue" type="date"></label><div class="quick-capture-actions"><button onclick="closeQuickCapture()">Cancelar</button><button class="primary" onclick="saveQuickCapture()">Salvar lembrete</button></div><p>Vai para Extras e entra automaticamente na fila quando o prazo se aproximar.</p></section></div>`}
 
-function todayClassContext(){const date=analyticsDate(),dow=parseISO(date).getDay(),schedule=isTeachingDay(date)?PRESENTIAL.filter(x=>x.dow===dow):[],integral=schedule.filter(x=>COMPONENTS[x.comp]?.turno==="Integral").length,noturno=schedule.filter(x=>COMPONENTS[x.comp]?.turno==="Noturno").length,tone=TONOENEM_LESSONS.filter(x=>x.date===date);return {date,schedule,integral,noturno,tone}}
+function todayClassContext(){const date=analyticsDate(),dow=parseISO(date).getDay(),schedule=isTeachingDay(date)?PRESENTIAL.filter(x=>x.dow===dow):[],np=isTeachingDay(date)?NPS.filter(x=>x.dow===dow):[],integral=schedule.filter(x=>COMPONENTS[x.comp]?.turno==="Integral").length,noturno=schedule.filter(x=>COMPONENTS[x.comp]?.turno==="Noturno").length,tone=TONOENEM_LESSONS.filter(x=>x.date===date);return {date,schedule,np,integral,noturno,tone}}
 function renderTodayFlow(){
  const tasks=organizationNowTasks(),ctx=todayClassContext(),overdue=taskBandCount("overdue"),today=taskBandCount("today"),week=taskBandCount("next3")+taskBandCount("week"),weekday=TODAY().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
- const classText=ctx.schedule.length?`${ctx.schedule.length} aula${ctx.schedule.length===1?"":"s"}${ctx.integral&&ctx.noturno?` • ${ctx.integral} integral + ${ctx.noturno} noturno`:ctx.integral?" • integral":" • noturno"}`:"Sem aulas regulares hoje";
+ const parts=[];
+ if(ctx.schedule.length)parts.push(`${ctx.schedule.length} presencial${ctx.schedule.length===1?"":"is"}`);
+ if(ctx.np.length)parts.push(`${ctx.np.length} NP`);
+ const classText=parts.length?parts.join(" • "):"Sem aulas programadas hoje";
  return `<section class="today-flow organization-now"><div class="today-flow-head"><div><span>AGORA</span><h2>Hoje, ${weekday}</h2><p>${classText}. A fila abaixo já está em ordem de prioridade.</p></div><div class="today-head-actions"><button onclick="openQuickCapture()">+ Lembrar disso</button><button onclick="show('calendario')">${iconSvg("calendar",15)} Calendário</button></div></div><div class="priority-summary"><span class="overdue"><b>${overdue}</b> atrasado(s)</span><span class="today"><b>${today}</b> hoje</span><span class="week"><b>${week}</b> esta semana</span><small>recorrências geradas automaticamente</small></div>${tasks.length?`<div class="priority-queue">${tasks.map(renderPriorityTask).join("")}</div>`:`<div class="today-clear">✓ Nada urgente agora. O app continua observando prazos e recorrências.</div>`}</section>${quickCaptureHtml()}`;
 }
 
-function nextSevenDaysData(){const today=analyticsDate(),tasks=organizationTasks();return Array.from({length:7},(_,i)=>{const date=datePlus(today,i),classes=schoolClassesForDate(date),school=classes.filter(x=>x.kind==="school"),tone=classes.filter(x=>x.kind==="tono"),due=tasks.filter(t=>t.due===date),plans=incompleteLessonPlansForDate(date),prep=due.filter(t=>["lessonplan","tono","extra","plan","grade"].includes(t.kind)).length,score=school.length+(tone.length?2:0)+due.length*2+plans;return {date,school,tone,due,plans,score,conflict:score>=8||prep>=3}})}
-function renderNextSevenDays(){const days=nextSevenDaysData(),conflicts=days.filter(x=>x.conflict).length;return `<section class="org-panel next-seven"><div class="org-panel-head"><div><span>PRÓXIMOS 7 DIAS</span><h2>Antecipar antes de virar “era pra ontem”.</h2><p>${conflicts?`${conflicts} dia(s) merecem atenção pela concentração de aulas e entregas.`:"Carga distribuída sem conflito forte detectado."}</p></div></div><div class="seven-day-grid">${days.map((d,i)=>{const dt=parseISO(d.date),dow=dt.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","");return `<article class="seven-day ${d.conflict?"conflict":""} ${i===0?"today":""}" onclick="schoolClassesForDate('${d.date}').length?openDayContext('${d.date}'):show('calendario')"><div class="seven-day-date"><span>${dow}</span><strong>${dt.getDate()}</strong></div><div class="seven-day-load">${d.school.length?`<span>${d.school.length} aulas</span>`:""}${d.tone.length?`<span class="tono">#TONOENEM</span>`:""}${d.plans?`<span class="plans">${d.plans} plano(s)</span>`:""}${d.due.length?`<span class="due">${d.due.length} prazo(s)</span>`:""}${!d.school.length&&!d.tone.length&&!d.plans&&!d.due.length?`<small>sem cobrança</small>`:""}</div>${d.conflict?`<b class="load-alert">dia cheio</b>`:""}</article>`}).join("")}</div></section>`}
+function nextSevenDaysData(){const today=analyticsDate(),tasks=organizationTasks();return Array.from({length:7},(_,i)=>{const date=datePlus(today,i),classes=schoolClassesForDate(date),school=classes.filter(x=>x.kind==="school"),np=classes.filter(x=>x.kind==="np"),tone=classes.filter(x=>x.kind==="tono"),due=tasks.filter(t=>t.due===date),plans=incompleteLessonPlansForDate(date),prep=due.filter(t=>["lessonplan","tono","extra","plan","grade","np"].includes(t.kind)).length,score=school.length+np.length+(tone.length?2:0)+due.length*2+plans;return {date,school,np,tone,due,plans,score,conflict:score>=8||prep>=3}})}
+function renderNextSevenDays(){const days=nextSevenDaysData(),conflicts=days.filter(x=>x.conflict).length;return `<section class="org-panel next-seven"><div class="org-panel-head"><div><span>PRÓXIMOS 7 DIAS</span><h2>Antecipar antes de virar “era pra ontem”.</h2><p>${conflicts?`${conflicts} dia(s) merecem atenção pela concentração de aulas e entregas.`:"Carga distribuída sem conflito forte detectado."}</p></div></div><div class="seven-day-grid">${days.map((d,i)=>{const dt=parseISO(d.date),dow=dt.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","");return `<article class="seven-day ${d.conflict?"conflict":""} ${i===0?"today":""}" onclick="schoolClassesForDate('${d.date}').length?openDayContext('${d.date}'):show('calendario')"><div class="seven-day-date"><span>${dow}</span><strong>${dt.getDate()}</strong></div><div class="seven-day-load">${d.school.length?`<span>${d.school.length} presenciais</span>`:""}${d.np.length?`<span class="np">${d.np.length} NP</span>`:""}${d.tone.length?`<span class="tono">#TONOENEM</span>`:""}${d.plans?`<span class="plans">${d.plans} plano(s)</span>`:""}${d.due.length?`<span class="due">${d.due.length} prazo(s)</span>`:""}${!d.school.length&&!d.np.length&&!d.tone.length&&!d.plans&&!d.due.length?`<small>sem cobrança</small>`:""}</div>${d.conflict?`<b class="load-alert">dia cheio</b>`:""}</article>`}).join("")}</div></section>`}
 
 function weeklyClosureData(){const now=TODAY(),dow=now.getDay(),show=[5,6,0].includes(dow),mon=mondayOf(now),entries=activeEntries(entriesForWeek(mon)),cp=entries.filter(e=>rec(e).contentPosted).length,fp=entries.filter(e=>rec(e).attendancePosted).length,np=entries.filter(e=>String(e.mode).startsWith("NP")),npDone=np.filter(e=>rec(e).contentPosted&&rec(e).attendancePosted).length,nextMon=addDays(mon,7),plan=lessonPlanSummary(nextMon),calls=state.calls.filter(c=>!c.sgePosted).length;return {show,total:entries.length,cp,fp,npTotal:np.length,npDone,nextPlanDone:plan.planned,nextPlanTotal:plan.total,calls,complete:entries.length&&cp===entries.length&&fp===entries.length&&calls===0}}
 function renderWeeklyClosure(){const x=weeklyClosureData();if(!x.show)return "";const items=[["Conteúdo",x.cp,x.total,"openCurrentWeek()"],["Frequência",x.fp,x.total,"openCurrentWeek()"],["NP",x.npDone,x.npTotal,"openCurrentWeek()"],["Planos da próxima semana",x.nextPlanDone,x.nextPlanTotal,"show('aulas')"],["Chamadas → SGE",x.calls?0:1,1,"show('chamada')"]];return `<section class="org-panel weekly-close ${x.complete?"complete":""}"><div class="org-panel-head"><div><span>FECHAMENTO DA SEMANA</span><h2>${x.complete?"Semana conferida. ✓":"O que falta antes de encerrar a semana."}</h2><p>Auditoria automática: você não precisa montar esta lista.</p></div><button onclick="openCurrentWeek()">Abrir SGE</button></div><div class="weekly-close-grid">${items.map(([label,done,total,action])=>`<button onclick="${action}" class="${done>=total?"done":"pending"}"><span>${done>=total?"✓":"○"}</span><div><strong>${label}</strong><small>${done}/${total}</small></div></button>`).join("")}</div></section>`}
@@ -8178,7 +8272,7 @@ function renderWeeklyClosure(){const x=weeklyClosureData();if(!x.show)return "";
 function organizationForecast(){const today=analyticsDate(),monthEnd=new Date(TODAY().getFullYear(),TODAY().getMonth()+1,0,12),monthEndIso=iso(monthEnd),term=currentTerm(),monthly=MONTHLY_PLANS.filter(id=>!state.plans[id]?.[currentMonthKey()]).length,nextKey=nextMonthKey(currentMonthKey()),nextMonthly=MONTHLY_PLANS.filter(id=>!state.plans[id]?.[nextKey]).length,grades=term?GRADE_COMPONENTS.filter(id=>!state.grades[term.n]?.[id]).length:0,ementas=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada").length,nextTone=TONOENEM_LESSONS.find(x=>x.date>=today&&!toneRec(x.id).checks.pronta)||null;return {monthDays:daysUntil(monthEndIso),monthly,nextKey,nextMonthly,term,termDays:term?daysUntil(term.end):null,grades,ementas,nextTone}}
 function renderOrganizationForecast(){const x=organizationForecast();return `<section class="org-panel horizon"><div class="org-panel-head"><div><span>HORIZONTE ADMINISTRATIVO</span><h2>O que vai crescer se eu ignorar agora?</h2><p>Visão antecipada de mês e bimestre, sem transformar tudo em urgência.</p></div></div><div class="horizon-grid"><div><span>Fim do mês</span><strong>${x.monthDays} dias</strong><small>${x.monthly} plano(s) mensal(is) atual(is) pendente(s)</small></div><div><span>Próximo mês</span><strong>${monthLabelFromKey(x.nextKey)}</strong><small>${x.nextMonthly} planejamento(s) ainda não marcado(s)</small></div><div><span>${x.term?`${x.term.n}º bimestre`:"Bimestre"}</span><strong>${x.termDays!==null?`${x.termDays} dias`:"—"}</strong><small>${x.grades} turma(s) com notas a confirmar</small></div><div><span>Documentos</span><strong>${x.ementas}</strong><small>ementa(s) de PI II a resolver</small></div>${x.nextTone?`<div class="tone"><span>Próximo #TONOENEM</span><strong>${br(x.nextTone.date)}</strong><small>${tonoNextAction(x.nextTone.id)}</small></div>`:""}</div></section>`}
 
-function calendarWorkloadForDate(date,tasks=organizationTasks()){const classes=schoolClassesForDate(date),school=classes.filter(x=>x.kind==="school"),tone=classes.filter(x=>x.kind==="tono"),plans=incompleteLessonPlansForDate(date),due=tasks.filter(t=>t.due===date&&t.kind!=="lessonplan"),deliveries=due.filter(t=>["extra","tono","grade","plan","issue"].includes(t.kind)).length,score=school.length+(tone.length?2:0)+plans+due.length*2;return {school,tone,plans,due,deliveries,score,heavy:score>=8}}
+function calendarWorkloadForDate(date,tasks=organizationTasks()){const classes=schoolClassesForDate(date),school=classes.filter(x=>x.kind==="school"),np=classes.filter(x=>x.kind==="np"),tone=classes.filter(x=>x.kind==="tono"),plans=incompleteLessonPlansForDate(date),due=tasks.filter(t=>t.due===date&&t.kind!=="lessonplan"),deliveries=due.filter(t=>["extra","tono","grade","plan","issue"].includes(t.kind)).length,score=school.length+np.length+(tone.length?2:0)+plans+due.length*2;return {school,np,tone,plans,due,deliveries,score,heavy:score>=8}}
 
 function renderResumo(){
  ensureAnalytics();
@@ -8420,13 +8514,21 @@ function updateGroups(){
  }
  const by={};
  es.forEach(e=>{if(!by[e.day])by[e.day]=[];by[e.day].push(e)});
- const order=["Quarta-feira","Quinta-feira","Sexta-feira","NP"];
- return order.filter(day=>by[day]?.length).map(day=>({
-   key:`data:${day}`,
-   label:day==="NP"?"Aulas não presenciais da semana":day,
-   sublabel:day==="NP"?`Sem dia específico • ${by[day].length} registros`:`${br(by[day][0].date)} • ${by[day].length} registros`,
-   entries:by[day]
- }));
+ const order=["Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira"];
+ return order.filter(day=>by[day]?.length).map(day=>{
+   const entries=by[day].sort((a,b)=>timeToMin(a.time)-timeToMin(b.time));
+   const npCount=entries.filter(e=>e.mode.startsWith("NP")).length;
+   const presencialCount=entries.filter(e=>e.mode==="Presencial").length;
+   const parts=[];
+   if(presencialCount)parts.push(`${presencialCount} presencial${presencialCount>1?"is":""}`);
+   if(npCount)parts.push(`${npCount} NP`);
+   return {
+     key:`data:${day}`,
+     label:day,
+     sublabel:`${br(entries[0].date)} • ${parts.join(" • ")}`,
+     entries
+   };
+ });
 }
 function accumulatedGroups(){
  const all=[];
@@ -8670,14 +8772,16 @@ function openCallForEntry(id){
 function workspaceLessonHtml(e){
  const c=COMPONENTS[e.comp],r=rec(e),isAccum=updateScope==="acumulado";
  const localCall=state.calls.some(x=>(x.coveredLessonIds||[]).includes(e.id));
- const date=e.mode.startsWith("NP")?`NP ${e.mode.replace("NP ","")}`:`${e.day.replace("-feira","").slice(0,3).toUpperCase()} ${br(e.date).slice(0,5)}`;
- const time=e.mode.startsWith("NP")?"Sem data fixa":e.time;
+ const isNP=e.mode.startsWith("NP");
+ const date=`${e.day.replace("-feira","").slice(0,3).toUpperCase()} ${br(e.date).slice(0,5)}`;
+ const time=isNP?`${e.time} • NP`:e.time;
  const subject=c.tipo==="exp"?"Experimental":c.nome;
  const context=updateView==="data"&&!isAccum?`${c.turma} • ${subject}`:subject;
+ const detail=isNP?"Aula não presencial • 50 min":(c.tipo==="mat"?"Projeto Integrador II":c.turno);
  if(r.skipped){
    return `<div class="work-row skipped">
      <div class="work-date"><strong>${date}</strong><span>${time}</span></div>
-     <div class="work-subject"><strong>${esc(context)}</strong><span>${c.tipo==="mat"?"Projeto Integrador II":c.turno}</span></div>
+     <div class="work-subject"><strong>${esc(context)}</strong><span>${detail}</span></div>
      <div class="work-status"><span class="workspace-skipped">Não houve aula</span></div>
      <div class="work-actions"><button class="row-text-btn" onclick="toggleNoClass('${e.id}')">Restaurar</button></div>
    </div>`;
