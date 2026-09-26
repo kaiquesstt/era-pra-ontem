@@ -5846,6 +5846,17 @@ body.design-v19 .sge-issue-duplicate-warning{
 body.design-v19 .sge-issue-duplicate-warning.show{display:block}
 body.design-v19 .sge-issue-duplicate-warning b{color:#f0c477}
 
+
+/* ==========================================================
+   V27 — Projeto Integrador II: Ementa = obrigação semestral
+   ========================================================== */
+body.design-v19 #sec-planejamentos .module-task-card.mat .module-task-main small{
+  color:#8fa59c!important;
+}
+body.design-v19 #sec-planejamentos .module-summary-card.mat{
+  box-shadow:inset 3px 0 0 rgba(86,214,158,.48)!important;
+}
+
 </style>
 </head>
 <body class="design-v19">
@@ -6070,7 +6081,6 @@ const LAST_CONTENT = {
 };
 
 const MONTHLY_PLANS=["fis-23.06","fis-33.01","exp-33.01","fis-33.02","exp-33.02","fis-33.03","exp-33.03","fis-33.05","fis-33.06","fis-33.07","fis-33.08"];
-const SEMESTER_PLANS=["mat-33.03","mat-23.06","mat-33.08"];
 const GRADE_COMPONENTS=["mat-33.03","mat-23.06","mat-33.08","fis-23.06","fis-33.01","fis-33.02","fis-33.03","fis-33.05","fis-33.06","fis-33.07","fis-33.08"];
 const EMENTAS=["mat-33.03","mat-23.06","mat-33.08"];
 
@@ -6638,7 +6648,6 @@ function makeDefault(){
   }
 };
  MONTHLY_PLANS.forEach(id=>s.plans[id]={"2026-08":true,"2026-09":false,"2026-10":false,"2026-11":false,"2026-12":false});
- SEMESTER_PLANS.forEach(id=>s.plans[id]={"2026-S2":false});
  GRADE_COMPONENTS.forEach(id=>s.grades[3][id]=false);
  EMENTAS.forEach(id=>s.ementas[id]="nao-informado");
  return s;
@@ -6654,6 +6663,11 @@ function mergeState(base,saved){
  if(!s.grades[3])s.grades[3]={...base.grades[3]};
  s.grades[3]={...base.grades[3],...s.grades[3]};
  s.ementas={...base.ementas,...(saved.ementas||{})};
+ // V27 migration: the old PI II "semester planning" and the Ementa
+ // were the same obligation. Preserve any old completion as Ementa launched.
+ EMENTAS.forEach(id=>{
+   if(saved.plans?.[id]?.["2026-S2"]===true && s.ementas[id]!=="lancada")s.ementas[id]="lancada";
+ });
  s.calls=saved.calls||[];
  s.lessonPlans={...(base.lessonPlans||{}),...(saved.lessonPlans||{})};
  s.sgeIssues={...(base.sgeIssues||{}),...(saved.sgeIssues||{})};
@@ -6666,6 +6680,19 @@ function mergeState(base,saved){
    events:[...((saved.analytics||{}).events||[])],
    snapshots:{...((saved.analytics||{}).snapshots||{})}
  };
+ EMENTAS.forEach(id=>{
+   const legacyKey=`plan:${id}:2026-S2`,newKey=`ementa:${id}:2026-S2`;
+   const oldResolved=s.analytics.resolvedKeys?.[legacyKey];
+   if(oldResolved){
+     if(!s.analytics.resolvedKeys[newKey])s.analytics.resolvedKeys[newKey]={...oldResolved,label:`${COMPONENTS[id].turma} • ementa`};
+     delete s.analytics.resolvedKeys[legacyKey];
+   }
+ });
+ s.analytics.events=(s.analytics.events||[]).map(e=>{
+   if(!String(e.key||"").startsWith("plan:mat-")||!String(e.key||"").endsWith(":2026-S2"))return e;
+   const id=String(e.key).slice(5,-8);
+   return EMENTAS.includes(id)?{...e,key:`ementa:${id}:2026-S2`,label:`${COMPONENTS[id].turma} • ementa`}:e;
+ });
  return s;
 }
 function load(){
@@ -6725,7 +6752,13 @@ function currentResolvedKnownKeys(){
    if(r.attendancePosted)keys[`sge:freq:${id}`]={area:"SGE",comp:r.comp||null};
  });
  Object.entries(state.plans||{}).forEach(([comp,obj])=>{
-   Object.entries(obj||{}).forEach(([period,done])=>{if(done)keys[`plan:${comp}:${period}`]={area:"Planejamentos",comp}})
+   Object.entries(obj||{}).forEach(([period,done])=>{
+     if(EMENTAS.includes(comp)&&period==="2026-S2")return; // legacy V26 and earlier
+     if(done)keys[`plan:${comp}:${period}`]={area:"Planejamentos",comp};
+   });
+ });
+ EMENTAS.forEach(comp=>{
+   if((state.ementas[comp]||"nao-informado")==="lancada")keys[`ementa:${comp}:2026-S2`]={area:"Planejamentos",comp};
  });
  Object.entries(state.grades||{}).forEach(([term,obj])=>{
    Object.entries(obj||{}).forEach(([comp,done])=>{if(done)keys[`grade:${term}:${comp}`]={area:"Notas",comp}})
@@ -6792,9 +6825,9 @@ function disciplinePending(){
    if(!r.contentPosted)result[COMPONENTS[e.comp].tipo]++;
    if(!r.attendancePosted)result[COMPONENTS[e.comp].tipo]++;
  });
- // Planos/notas são atribuídos à disciplina também.
+ // Planejamentos/notas são atribuídos à disciplina também.
  MONTHLY_PLANS.forEach(id=>{const mk=currentMonthKey();if(state.plans[id]&&state.plans[id][mk]===false)result[COMPONENTS[id].tipo]++});
- SEMESTER_PLANS.forEach(id=>{if(state.plans[id]&&state.plans[id]["2026-S2"]===false)result[COMPONENTS[id].tipo]++});
+ EMENTAS.forEach(id=>{if((state.ementas[id]||"nao-informado")!=="lancada")result[COMPONENTS[id].tipo]++});
  const t=currentTerm();if(t)GRADE_COMPONENTS.forEach(id=>{if(!state.grades[t.n]?.[id])result[COMPONENTS[id].tipo]++});
  return result;
 }
@@ -6977,7 +7010,7 @@ function syncContentLast(comp){ state.contentLast[comp]=effectiveLastContent(com
 
 function currentPlanPending(){
  const mk=currentMonthKey();
- let n=SEMESTER_PLANS.filter(id=>!state.plans[id]?.["2026-S2"]).length;
+ let n=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada").length;
  if(mk>="2026-08"&&mk<="2026-12")n+=MONTHLY_PLANS.filter(id=>!state.plans[id]?.[mk]).length;
  return n;
 }
@@ -8355,11 +8388,8 @@ function organizationTasks(){
 
  [mk,nextMonthKey(mk)].forEach(key=>{if(key<"2026-08"||key>"2026-12")return;const pending=MONTHLY_PLANS.filter(id=>!state.plans[id]?.[key]);if(pending.length)push({id:`monthly:${key}`,kind:"plan",area:"Planos",title:`Planejamentos de ${monthLabelFromKey(key)} • ${pending.length} pendente(s)`,sub:"Meta interna: deixar o mês preparado desde o início",due:`${key}-01`,lead:7,icon:"planner",next:"Abrir Planos e concluir somente os componentes ainda pendentes.",action:"show('planejamentos')"})});
 
- const semPending=SEMESTER_PLANS.filter(id=>!state.plans[id]?.["2026-S2"]);
- if(semPending.length)push({id:"semester:2026-S2",kind:"plan",area:"Planos",title:`Planejamento semestral de PI II • ${semPending.length} pendente(s)`,sub:"Obrigação recorrente gerada automaticamente",due:"2026-08-03",lead:999,icon:"planner",next:"Abrir Planos e marcar apenas as turmas já lançadas.",action:"show('planejamentos')"});
-
  const emPending=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada");
- if(emPending.length)push({id:"ementas",kind:"ementa",area:"Planos",title:`Ementas de PI II • ${emPending.length} a resolver`,sub:"Pendência administrativa sem prazo informado",due:null,attention:false,icon:"note",next:"Confirmar quais ementas ainda precisam de lançamento.",action:"show('planejamentos')"});
+ if(emPending.length)push({id:"ementas",kind:"ementa",area:"Planos",title:`Ementas do Projeto Integrador II • ${emPending.length} a resolver`,sub:"1 ementa por turma para todo o semestre • sem prazo informado",due:null,attention:false,icon:"note",next:"Abrir Planos e confirmar quais ementas já foram lançadas.",action:"show('planejamentos')"});
 
  if(term){const pending=GRADE_COMPONENTS.filter(id=>!state.grades[term.n]?.[id]);if(pending.length)push({id:`grades:${term.n}`,kind:"grade",area:"Notas",title:`Notas do ${term.n}º bimestre • ${pending.length} turma(s)`,sub:`Encerramento em ${br(term.end)}`,due:term.end,lead:14,icon:"calculator",next:"Conferir quais turmas já tiveram as notas lançadas no SGE.",action:"show('notas')"})}
 
@@ -9030,36 +9060,53 @@ function renderPlanejamentos(){
  const mk=currentMonthKey(),monthNames={"2026-08":"Agosto","2026-09":"Setembro","2026-10":"Outubro","2026-11":"Novembro","2026-12":"Dezembro"};
  const currentMonthly=(mk>="2026-08"&&mk<="2026-12")?MONTHLY_PLANS:[];
  const monthlyPending=currentMonthly.filter(id=>!state.plans[id]?.[mk]).length;
- const semesterPending=SEMESTER_PLANS.filter(id=>!state.plans[id]?.["2026-S2"]).length;
  const ementaPending=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada").length;
- const monthlyPendingHtml=currentMonthly.filter(id=>!state.plans[id]?.[mk]).map(id=>{const c=COMPONENTS[id],title=c.tipo==="exp"?"Prática Experimental de Física":esc(c.nome);return `<article class="module-task-card ${c.tipo}"><div class="module-task-main"><div class="module-task-top"><span class="module-turma">${c.turma}</span></div><strong>${title}</strong><small>Planejamento mensal • ${monthNames[mk]||mk}</small></div><button class="module-state pending" onclick="togglePlan('${id}','${mk}')">○ Marcar lançado</button></article>`}).join("");
- const monthlyDoneHtml=currentMonthly.filter(id=>!!state.plans[id]?.[mk]).map(id=>{const c=COMPONENTS[id],title=c.tipo==="exp"?"Prática Experimental de Física":esc(c.nome);return `<article class="module-task-card ${c.tipo}"><div class="module-task-main"><span class="module-turma">${c.turma}</span><strong>${title}</strong><small>${monthNames[mk]||mk}</small></div><button class="module-state done" onclick="togglePlan('${id}','${mk}')">✓ Lançado</button></article>`}).join("");
- const semesterPendingHtml=SEMESTER_PLANS.filter(id=>!state.plans[id]?.["2026-S2"]).map(id=>{const c=COMPONENTS[id];return `<article class="module-task-card mat"><div class="module-task-main"><div class="module-task-top"><span class="module-turma">${c.turma}</span></div><strong>Projeto Integrador II</strong><small>Planejamento semestral • 2º semestre</small></div><button class="module-state pending" onclick="togglePlan('${id}','2026-S2')">○ Marcar lançado</button></article>`}).join("");
- const semesterDoneHtml=SEMESTER_PLANS.filter(id=>!!state.plans[id]?.["2026-S2"]).map(id=>{const c=COMPONENTS[id];return `<article class="module-task-card mat"><div class="module-task-main"><span class="module-turma">${c.turma}</span><strong>Projeto Integrador II</strong><small>2º semestre</small></div><button class="module-state done" onclick="togglePlan('${id}','2026-S2')">✓ Lançado</button></article>`}).join("");
- const ementaPendingHtml=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada").map(id=>{const c=COMPONENTS[id],st=state.ementas[id]||"nao-informado";return `<article class="module-task-card mat"><div class="module-task-main"><div class="module-task-top"><span class="module-turma">${c.turma}</span></div><strong>Ementa do Projeto Integrador II</strong><small>Documento complementar da turma</small></div><select class="module-select ${st}" onchange="setEmenta('${id}',this.value)"><option value="nao-informado" ${st==="nao-informado"?"selected":""}>A confirmar</option><option value="pendente" ${st==="pendente"?"selected":""}>Pendente</option><option value="lancada">✓ Lançada</option></select></article>`}).join("");
- const ementaDoneHtml=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")==="lancada").map(id=>{const c=COMPONENTS[id];return `<article class="module-task-card mat"><div class="module-task-main"><span class="module-turma">${c.turma}</span><strong>Ementa do Projeto Integrador II</strong><small>Concluída</small></div><select class="module-select lancada" onchange="setEmenta('${id}',this.value)"><option value="lancada" selected>✓ Lançada</option><option value="pendente">Reabrir</option></select></article>`}).join("");
- const hist=MONTHLY_PLANS.map(id=>{const c=COMPONENTS[id],months=Object.entries(state.plans[id]||{}).filter(([k])=>k.startsWith("2026-")).map(([k,v])=>`<span class="${v?"ok":"off"}">${monthNames[k]||k} ${v?"✓":"○"}</span>`).join("");return `<div class="history-plan-row ${c.tipo}"><div><strong>${c.turma}</strong><small>${esc(c.nome)}</small></div><div class="history-months">${months||"<span class='off'>Sem registros</span>"}</div></div>`}).join("");
+ const totalPending=monthlyPending+ementaPending;
+
+ const ementaPendingHtml=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")!=="lancada").map(id=>{
+   const c=COMPONENTS[id],st=state.ementas[id]||"nao-informado";
+   return `<article class="module-task-card mat"><div class="module-task-main"><div class="module-task-top"><span class="module-turma">${c.turma}</span></div><strong>Ementa • Projeto Integrador II</strong><small>Única do semestre • duração de 6 meses</small></div><select class="module-select ${st}" onchange="setEmenta('${id}',this.value)"><option value="nao-informado" ${st==="nao-informado"?"selected":""}>A confirmar</option><option value="pendente" ${st==="pendente"?"selected":""}>Pendente</option><option value="lancada">✓ Lançada</option></select></article>`;
+ }).join("");
+ const ementaDoneHtml=EMENTAS.filter(id=>(state.ementas[id]||"nao-informado")==="lancada").map(id=>{
+   const c=COMPONENTS[id];
+   return `<article class="module-task-card mat"><div class="module-task-main"><span class="module-turma">${c.turma}</span><strong>Ementa • Projeto Integrador II</strong><small>Semestre atual</small></div><select class="module-select lancada" onchange="setEmenta('${id}',this.value)"><option value="lancada" selected>✓ Lançada</option><option value="pendente">Reabrir</option></select></article>`;
+ }).join("");
+
+ const monthlyPendingHtml=currentMonthly.filter(id=>!state.plans[id]?.[mk]).map(id=>{
+   const c=COMPONENTS[id],title=c.tipo==="exp"?"Prática Experimental de Física":esc(c.nome);
+   return `<article class="module-task-card ${c.tipo}"><div class="module-task-main"><div class="module-task-top"><span class="module-turma">${c.turma}</span></div><strong>${title}</strong><small>Planejamento mensal • ${monthNames[mk]||mk}</small></div><button class="module-state pending" onclick="togglePlan('${id}','${mk}')">○ Marcar lançado</button></article>`;
+ }).join("");
+ const monthlyDoneHtml=currentMonthly.filter(id=>!!state.plans[id]?.[mk]).map(id=>{
+   const c=COMPONENTS[id],title=c.tipo==="exp"?"Prática Experimental de Física":esc(c.nome);
+   return `<article class="module-task-card ${c.tipo}"><div class="module-task-main"><span class="module-turma">${c.turma}</span><strong>${title}</strong><small>${monthNames[mk]||mk}</small></div><button class="module-state done" onclick="togglePlan('${id}','${mk}')">✓ Lançado</button></article>`;
+ }).join("");
+
+ const hist=MONTHLY_PLANS.map(id=>{
+   const c=COMPONENTS[id],months=Object.entries(state.plans[id]||{}).filter(([k])=>/^2026-(08|09|10|11|12)$/.test(k)).map(([k,v])=>`<span class="${v?"ok":"off"}">${monthNames[k]||k} ${v?"✓":"○"}</span>`).join("");
+   return `<div class="history-plan-row ${c.tipo}"><div><strong>${c.turma}</strong><small>${esc(c.nome)}</small></div><div class="history-months">${months||"<span class='off'>Sem registros</span>"}</div></div>`;
+ }).join("");
+
  document.getElementById("sec-planejamentos").innerHTML=`
- <div class="module-hero plans-module-hero"><div><span class="module-kicker">ORGANIZAÇÃO</span><h1>Planos sem virar uma pilha.</h1><p>A área principal mostra somente o que falta. O concluído fica recolhido no histórico.</p></div><div class="module-summary-grid"><div class="module-summary-card mat"><span>Semestrais</span><strong>${semesterPending}</strong><small>pendente(s)</small></div><div class="module-summary-card fis"><span>Mensais</span><strong>${monthlyPending}</strong><small>pendente(s) em ${monthNames[mk]||mk}</small></div><div class="module-summary-card exp"><span>Ementas</span><strong>${ementaPending}</strong><small>a resolver</small></div></div></div>
- <section class="module-section"><div class="module-section-head"><div><span class="section-dot mat"></span><div><h2>Matemática • semestre</h2><p>Projeto Integrador II</p></div></div><div class="module-head-actions"><span>${semesterPending} pendente(s)</span>${semesterPending?`<button class="btn small" onclick="completePlanGroup('semester')">Concluir pendentes</button>`:""}</div></div><div class="module-card-grid">${semesterPendingHtml||`<div class="module-empty">Planejamentos semestrais em dia. ✓</div>`}</div></section>
- <section class="module-section"><div class="module-section-head"><div><span class="section-dot fis"></span><div><h2>Física e Experimental • ${monthNames[mk]||"mês atual"}</h2><p>Planejamentos mensais</p></div></div><div class="module-head-actions"><span>${monthlyPending} pendente(s)</span>${monthlyPending?`<button class="btn small" onclick="completePlanGroup('monthly')">Concluir pendentes</button>`:""}</div></div><div class="module-card-grid">${monthlyPendingHtml||`<div class="module-empty">Planejamentos mensais em dia. ✓</div>`}</div></section>
- <section class="module-section"><div class="module-section-head"><div><span class="section-dot mat"></span><div><h2>Ementas</h2><p>Documentos do Projeto Integrador</p></div></div><span>${ementaPending} a resolver</span></div><div class="module-card-grid">${ementaPendingHtml||`<div class="module-empty">Ementas em dia. ✓</div>`}</div></section>
- ${(monthlyDoneHtml||semesterDoneHtml||ementaDoneHtml)?`<details class="module-history"><summary>Concluídos nesta etapa</summary><div class="module-card-grid module-history-completed">${semesterDoneHtml}${monthlyDoneHtml}${ementaDoneHtml}</div></details>`:""}
- <details class="module-history"><summary>Histórico de planejamentos mensais</summary><div class="module-history-body">${hist}</div></details>`;
+ <div class="module-hero plans-module-hero"><div><span class="module-kicker">ORGANIZAÇÃO</span><h1>Planejamentos e ementas sem duplicidade.</h1><p>Projeto Integrador II tem uma única ementa para o semestre. Física e Experimental continuam com planejamento mensal.</p></div><div class="module-summary-grid"><div class="module-summary-card mat"><span>Ementas PI II</span><strong>${ementaPending}</strong><small>pendente(s) no semestre</small></div><div class="module-summary-card fis"><span>Planos mensais</span><strong>${monthlyPending}</strong><small>pendente(s) em ${monthNames[mk]||mk}</small></div><div class="module-summary-card exp"><span>Total</span><strong>${totalPending}</strong><small>obrigação(ões) a resolver</small></div></div></div>
+
+ <section class="module-section"><div class="module-section-head"><div><span class="section-dot mat"></span><div><h2>Ementas • Projeto Integrador II</h2><p>1 ementa por turma • válida para os 6 meses do semestre</p></div></div><span>${ementaPending} a resolver</span></div><div class="module-card-grid">${ementaPendingHtml||`<div class="module-empty">Todas as ementas do Projeto Integrador II estão lançadas. ✓</div>`}</div></section>
+
+ <section class="module-section"><div class="module-section-head"><div><span class="section-dot fis"></span><div><h2>Física e Experimental • ${monthNames[mk]||"mês atual"}</h2><p>Planejamentos mensais</p></div></div><div class="module-head-actions"><span>${monthlyPending} pendente(s)</span>${monthlyPending?`<button class="btn small" onclick="completeMonthlyPlans()">Concluir pendentes</button>`:""}</div></div><div class="module-card-grid">${monthlyPendingHtml||`<div class="module-empty">Planejamentos mensais em dia. ✓</div>`}</div></section>
+
+ ${(monthlyDoneHtml||ementaDoneHtml)?`<details class="module-history"><summary>Concluídos nesta etapa</summary><div class="module-card-grid module-history-completed">${ementaDoneHtml}${monthlyDoneHtml}</div></details>`:""}
+ <details class="module-history"><summary>Histórico de planejamentos mensais • Física e Experimental</summary><div class="module-history-body">${hist}</div></details>`;
 }
 
 
-function completePlanGroup(kind){
+function completeMonthlyPlans(){
  const mk=currentMonthKey();
- const ids=kind==="semester"?SEMESTER_PLANS:MONTHLY_PLANS;
- const key=kind==="semester"?"2026-S2":mk;
- const pending=ids.filter(id=>!state.plans[id]?.[key]);
+ const pending=MONTHLY_PLANS.filter(id=>!state.plans[id]?.[mk]);
  if(!pending.length)return;
- if(!confirm(`Marcar ${pending.length} planejamento(s) pendente(s) como lançado(s)?`))return;
+ if(!confirm(`Marcar ${pending.length} planejamento(s) mensal(is) como lançado(s)?`))return;
  pending.forEach(id=>{
    if(!state.plans[id])state.plans[id]={};
-   state.plans[id][key]=true;
-   recordResolution(`plan:${id}:${key}`,true,"Planejamentos",id,`${COMPONENTS[id].turma} • planejamento`);
+   state.plans[id][mk]=true;
+   recordResolution(`plan:${id}:${mk}`,true,"Planejamentos",id,`${COMPONENTS[id].turma} • planejamento mensal`);
  });
  save();refreshAfterMutation("planejamentos");
 }
@@ -9070,7 +9117,13 @@ function togglePlan(id,key){
  recordResolution(`plan:${id}:${key}`,next,"Planejamentos",id,`${COMPONENTS[id].turma} • planejamento`);
  save();refreshAfterMutation("planejamentos")
 }
-function setEmenta(id,v){state.ementas[id]=v;save();refreshAfterMutation("planejamentos")}
+function setEmenta(id,v){
+ const prev=state.ementas[id]||"nao-informado";
+ state.ementas[id]=v;
+ if(v==="lancada"&&prev!=="lancada")recordResolution(`ementa:${id}:2026-S2`,true,"Planejamentos",id,`${COMPONENTS[id].turma} • ementa`);
+ else if(prev==="lancada"&&v!=="lancada")recordResolution(`ementa:${id}:2026-S2`,false,"Planejamentos",id,`${COMPONENTS[id].turma} • ementa`);
+ save();refreshAfterMutation("planejamentos");
+}
 
 function renderNotas(){
  const t=currentTerm()||{n:3,start:"2026-08-03",end:"2026-10-14"};
