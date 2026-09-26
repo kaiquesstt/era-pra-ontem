@@ -1,14 +1,1 @@
-ERA PRA ONTEM V22
-
-Correção:
-- botões de resolução de conflito agora usam eventos delegados;
-- a interface mostra "Aplicando escolha...";
-- conflitos bloqueiam sincronizações automáticas até a decisão;
-- erros aparecem dentro do painel;
-- o status não exibe "Sincronizado" enquanto há conflito.
-
-Para atualizar o GitHub Pages:
-1. Substitua o index.html do repositório por este arquivo.
-2. Faça Commit changes.
-3. Aguarde o GitHub Pages publicar.
-4. Recarregue o site com Ctrl+F5.
+V23: corrige o alinhamento do modo Só letivos. 01/10/2026 permanece quinta-feira. Não requer mudança no Supabase.

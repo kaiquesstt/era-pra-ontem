@@ -5777,6 +5777,19 @@ body.design-v19 .v13-brand-copy span{font-size:11px!important;color:#75869d!impo
 }
 @keyframes cloudConflictSpin{to{transform:rotate(360deg)}}
 
+
+/* V23 — alinhamento correto no modo Só letivos */
+.school-calendar-card.letivo-only .school-day.letivo-gap{
+  min-height:88px;
+  background:rgba(255,255,255,.008)!important;
+  border:1px dashed rgba(120,145,175,.07)!important;
+  box-shadow:none!important;
+  pointer-events:none;
+}
+body.design-v19.density-compact .school-calendar-card.letivo-only .school-day.letivo-gap{
+  min-height:72px;
+}
+
 </style>
 </head>
 <body class="design-v19">
@@ -7980,16 +7993,32 @@ function renderSchoolCalendar(){
  const days=new Date(year,m+1,0,12).getDate();
  const cells=[];
  const weekdays=schoolCalendarMode==="letivo"?["SEG","TER","QUA","QUI","SEX"]:["SEG","TER","QUA","QUI","SEX","SÁB","DOM"];
- if(schoolCalendarMode!=="letivo"){
-   const first=new Date(year,m,1,12);
-   const offset=(first.getDay()+6)%7;
-   for(let i=0;i<offset;i++)cells.push(`<div class="school-day empty"></div>`);
+ const first=new Date(year,m,1,12);
+ const firstMondayIndex=(first.getDay()+6)%7; // SEG=0 ... DOM=6
+
+ if(schoolCalendarMode==="letivo"){
+   const weekdayOffset=firstMondayIndex<5?firstMondayIndex:0;
+   for(let i=0;i<weekdayOffset;i++){
+     cells.push(`<div class="school-day empty letivo-gap" aria-hidden="true"></div>`);
+   }
+ }else{
+   for(let i=0;i<firstMondayIndex;i++){
+     cells.push(`<div class="school-day empty" aria-hidden="true"></div>`);
+   }
  }
+
  for(let d=1;d<=days;d++){
    const date=`${year}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
    const dt=new Date(year,m,d,12);
    const weekend=[0,6].includes(dt.getDay());
-   if(schoolCalendarMode==="letivo" && !isTeachingDay(date)) continue;
+
+   if(schoolCalendarMode==="letivo"){
+     if(weekend) continue;
+     if(!isTeachingDay(date)){
+       cells.push(`<div class="school-day empty letivo-gap" aria-label="${d} de ${SCHOOL_MONTHS[m]} — não letivo"></div>`);
+       continue;
+     }
+   }
    const today=date===iso(TODAY());
    const vis=schoolDayVisual(date,weekend);
    const dayClasses=schoolClassesForDate(date);
