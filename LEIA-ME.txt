@@ -1,0 +1,17 @@
+ERA PRA ONTEM V29
+
+- Chamada removida. A lista de alunos saiu do código e chamadas antigas
+  salvas no navegador ou na nuvem são descartadas ao abrir esta versão.
+- "Sem aula" em dois tipos: escola (continua cobrada no SGE) e governo
+  (suspensa, não é cobrada no SGE).
+- Atrasado = aula de dia anterior sem conteúdo ou frequência confirmados.
+  Aulas do próprio dia não contam como atraso.
+- #TONOENEM: encontros com data passada contam como ministrados.
+- Semana do SGE se fecha sozinha quando tudo está lançado.
+- Botão "Desfazer" após cada marcação no SGE.
+- Novo tipo de aula: Avaliação.
+- Data calculada no fuso local (antes virava o dia seguinte após as 21h).
+- Imagens comprimidas: arquivo passou de 3,1 MB para cerca de 730 KB.
+
+Supabase: nenhuma mudança de tabela é necessária.
+Atualização: substitua o index.html, faça o commit e recarregue com Ctrl+F5.
